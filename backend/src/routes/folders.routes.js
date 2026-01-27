@@ -1,10 +1,10 @@
+// src/routes/folders.routes.js
 console.log("✅ LOADED folders.routes.js");
 
 import { Router } from "express";
 import pool from "../db/pool.js";
 
-import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { adminOnly } from "../middlewares/role.middleware.js";
+import { authRequired, requireAdmin } from "../middlewares/auth.js";
 
 const router = Router();
 
@@ -12,7 +12,7 @@ const router = Router();
  * GET /api/folders
  * GET /api/folders?parent_id=xxx
  */
-router.get("/", authMiddleware, async (req, res) => {
+router.get("/", authRequired, async (req, res) => {
   try {
     const { parent_id } = req.query;
 
@@ -20,12 +20,15 @@ router.get("/", authMiddleware, async (req, res) => {
     let whereParent = "parent_id IS NULL";
 
     // parent_id = undefined => root
+    // parent_id = "" => root (treat as null)
     // parent_id = "123" => children of 123
     if (parent_id !== undefined) {
       const pid = parent_id === "" ? null : Number(parent_id);
-      if (!Number.isInteger(pid)) {
+
+      if (pid !== null && !Number.isInteger(pid)) {
         return res.status(400).json({ message: "parent_id must be an integer" });
       }
+
       params.push(pid);
       whereParent = `parent_id = $${params.length}`;
     }
@@ -47,23 +50,24 @@ router.get("/", authMiddleware, async (req, res) => {
 });
 
 // POST /api/folders (admin เท่านั้น)
-router.post("/", authMiddleware, adminOnly, async (req, res) => {
+router.post("/", authRequired, requireAdmin, async (req, res) => {
   try {
     const { name, parent_id = null } = req.body || {};
 
-    // ✅ รองรับทั้ง req.user.id และ req.user.user_id กันพัง
-    const created_by = req.user?.id ?? req.user?.user_id ?? null;
+    const created_by = req.user?.id ?? null;
 
-    if (!name || typeof name !== "string") {
+    if (!name || typeof name !== "string" || !name.trim()) {
       return res.status(400).json({ message: "name is required" });
     }
-    if (created_by === null) {
-      return res.status(401).json({ message: "unauthorized" });
+    if (!created_by) {
+      return res.status(401).json({ message: "Unauthorized" });
     }
 
     const pid = parent_id === null ? null : Number(parent_id);
     if (pid !== null && !Number.isInteger(pid)) {
-      return res.status(400).json({ message: "parent_id must be an integer or null" });
+      return res
+        .status(400)
+        .json({ message: "parent_id must be an integer or null" });
     }
 
     const sql = `
@@ -86,7 +90,7 @@ router.post("/", authMiddleware, adminOnly, async (req, res) => {
  * DELETE /api/folders/:id (admin เท่านั้น)
  * Soft delete -> ย้ายไปถังขยะ (ตั้ง deleted_at)
  */
-router.delete("/:id", authMiddleware, adminOnly, async (req, res) => {
+router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
   try {
     const id = Number(req.params.id);
     if (!Number.isInteger(id)) {

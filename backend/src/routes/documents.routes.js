@@ -1,15 +1,11 @@
-// routes/documents.routes.js
+// src/routes/documents.routes.js
 import { Router } from "express";
-import { authMiddleware } from "../middlewares/auth.middleware.js";
-import { requireRole } from "../middlewares/role.middleware.js";
+import { authRequired } from "../middlewares/auth.js";
 
 import {
   listDocuments,
   getDocument,
   downloadDocument,
-  listTrash,
-  deleteDocument,
-  restoreDocument,
 } from "../controllers/documents.controller.js";
 
 import {
@@ -19,52 +15,80 @@ import {
 
 const router = Router();
 
+// helper: validate id (รองรับเลขและ uuid-ish)
+function isValidId(id) {
+  if (!id) return false;
+  if (/^\d+$/.test(id)) return true;            // integer id
+  if (/^[0-9a-fA-F-]{10,}$/.test(id)) return true; // uuid-ish
+  return false;
+}
+
+// helper: enforce multipart on upload routes (กันส่ง json แล้ว multer งง)
+function requireMultipart(req, res, next) {
+  const ct = req.headers["content-type"] || "";
+  if (!ct.includes("multipart/form-data")) {
+    return res.status(415).json({
+      ok: false,
+      message: "Content-Type must be multipart/form-data",
+    });
+  }
+  next();
+}
+
+/**
+ * ✅ backward compatible
+ * POST /api/documents/upload
+ * (ต้องอยู่ก่อน /:id)
+ */
+router.post(
+  "/upload",
+  authRequired,
+  requireMultipart,
+  uploadSingleFile,
+  uploadDocument
+);
+
 /**
  * STEP 9:
  * GET /api/documents?folder_id=...
- * user+admin
+ * user + admin
  */
-router.get("/", authMiddleware, listDocuments);
+router.get("/", authRequired, listDocuments);
 
 /**
- * STEP 10:
- * GET /api/documents/trash
- * ✅ ล็อก: ADMIN เท่านั้น
+ * STEP 9:
+ * POST /api/documents (Upload file จริง + insert DB)
+ * user + admin
  */
-router.get("/trash", authMiddleware, requireRole("ADMIN"), listTrash);
+router.post(
+  "/",
+  authRequired,
+  requireMultipart,
+  uploadSingleFile,
+  uploadDocument
+);
 
 /**
  * STEP 9:
  * GET /api/documents/:id/download
- * user+admin
+ * user + admin
  */
-router.get("/:id/download", authMiddleware, downloadDocument);
+router.get("/:id/download", authRequired, (req, res, next) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ ok: false, message: "INVALID_ID" });
+  }
+  return downloadDocument(req, res, next);
+});
 
 /**
  * (optional) ดูรายละเอียดเอกสาร
- * user+admin
+ * user + admin
  */
-router.get("/:id", authMiddleware, getDocument);
-
-/**
- * STEP 9:
- * POST /api/documents  (Upload file จริง + insert DB)
- * user+admin
- */
-router.post("/", authMiddleware, uploadSingleFile, uploadDocument);
-
-/**
- * ✅ backward compatible (ยังให้ใช้ได้)
- * POST /api/documents/upload
- */
-router.post("/upload", authMiddleware, uploadSingleFile, uploadDocument);
-
-/**
- * soft delete / restore
- * ✅ delete: ADMIN เท่านั้น (ของเดิมถูกแล้ว)
- * ✅ restore: ADMIN เท่านั้น (เพิ่มล็อก)
- */
-router.delete("/:id", authMiddleware, requireRole("ADMIN"), deleteDocument);
-router.patch("/:id/restore", authMiddleware, requireRole("ADMIN"), restoreDocument);
+router.get("/:id", authRequired, (req, res, next) => {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ ok: false, message: "INVALID_ID" });
+  }
+  return getDocument(req, res, next);
+});
 
 export default router;
