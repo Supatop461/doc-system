@@ -1,226 +1,73 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Document System</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
-    header { display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
-    h1 { margin:0; font-size: 20px; }
-    .row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }
-    input, select, button { padding: 10px 12px; border-radius: 10px; border:1px solid #ddd; }
-    button { cursor:pointer; }
-    .pill { padding: 6px 10px; border-radius: 999px; border:1px solid #ddd; background:#f7f7f7; }
-    table { width:100%; border-collapse: collapse; margin-top: 14px; }
-    th, td { text-align:left; padding: 10px; border-bottom:1px solid #eee; vertical-align: top; }
-    th { background:#fafafa; position: sticky; top: 0; }
-    .actions { display:flex; gap:8px; flex-wrap:wrap; }
-    .muted { color:#666; font-size: 12px; }
-    .ok { color: #0a7; }
-    .bad { color: #c33; }
-    .right { margin-left:auto; }
-    .card { border:1px solid #eee; border-radius: 14px; padding: 12px; margin-top: 14px; background:#fff; }
-    code { background:#f5f5f5; padding:2px 6px; border-radius: 8px; }
-  </style>
+  <meta charset="UTF-8">
+  <title>ระบบจัดการเอกสารหน่วย IT</title>
+
+  <!-- Google Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap"
+    rel="stylesheet">
+
+  <!-- CSS (เรียงจากกว้าง -> เฉพาะหน้า) -->
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/components.css">
+  <link rel="stylesheet" href="assets/css/pages/login.css">
 </head>
+
 <body>
-  <header>
-    <h1>📄 Document Management</h1>
-    <span class="pill" id="modePill">โหมด: ปกติ</span>
-    <span class="right muted" id="statusText">พร้อมใช้งาน</span>
-  </header>
 
-  <div class="card">
-    <div class="row">
-      <button id="btnNormal">รายการปกติ</button>
-      <button id="btnTrash">ถังขยะ</button>
+  <div class="page-center">
+    <div class="card login-card">
 
-      <input id="q" type="text" placeholder="ค้นหา (ชื่อไฟล์ / mime / path)" style="min-width:280px;" />
-      <button id="btnSearch">ค้นหา</button>
+      <!-- โลโก้ -->
+      <div class="logo">
+        <img src="assets/images/THG-RYH-V.png" alt="THG / RYH">
+      </div>
 
-      <span class="right muted">
-        deleted_by (ชั่วคราว): <input id="deletedBy" value="1" style="width:80px;" />
-      </span>
+      <!-- ชื่อระบบ -->
+      <h2 class="title">ระบบจัดการเอกสารหน่วย</h2>
+      <p class="subtitle">โรงพยาบาลธนบุรี ราษฎร์ยินดี</p>
+      <p class="unit">หน่วย IT</p>
+
+      <!-- ฟอร์ม -->
+      <form id="loginForm" autocomplete="on">
+        <div class="form-group">
+          <label for="username">รหัสพนักงาน</label>
+          <input
+            id="username"
+            name="username"
+            type="text"
+            placeholder="กรอกรหัสพนักงาน"
+            required
+            autocomplete="username">
+        </div>
+
+        <div class="form-group">
+          <label for="password">รหัสผ่าน</label>
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="กรอกรหัสผ่าน"
+            required
+            autocomplete="current-password">
+        </div>
+
+        <button id="loginBtn" class="btn-primary" type="submit">
+          เข้าสู่ระบบ
+        </button>
+
+        <!-- error จาก backend -->
+        <p id="error" class="error-text"></p>
+      </form>
+
     </div>
-
-    <div class="row muted">
-      <div>API ที่ใช้: <code>/api/documents</code> | <code>/api/documents/:id/download</code> | <code>DELETE /api/documents/:id</code> | <code>/api/documents/trash</code> | <code>PATCH /api/documents/:id/restore</code></div>
-    </div>
-
-    <table>
-      <thead>
-        <tr>
-          <th style="width:70px;">ID</th>
-          <th>ชื่อไฟล์</th>
-          <th style="width:140px;">ประเภท</th>
-          <th style="width:110px;">ขนาด</th>
-          <th>ที่อยู่ไฟล์</th>
-          <th style="width:320px;">การทำงาน</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
   </div>
 
-<script>
-  const tbody = document.getElementById("tbody");
-  const statusText = document.getElementById("statusText");
-  const modePill = document.getElementById("modePill");
-  const qInput = document.getElementById("q");
-  const deletedByInput = document.getElementById("deletedBy");
-
-  let mode = "normal"; // normal | trash
-
-  function setStatus(text, kind="") {
-    statusText.textContent = text;
-    statusText.className = kind ? kind : "muted";
-  }
-
-  function fmtBytes(n) {
-    if (n == null) return "-";
-    const num = Number(n);
-    if (Number.isNaN(num)) return String(n);
-    const units = ["B","KB","MB","GB"];
-    let v = num, i = 0;
-    while (v >= 1024 && i < units.length-1) { v /= 1024; i++; }
-    return `${v.toFixed(i===0?0:2)} ${units[i]}`;
-  }
-
-  function esc(s) {
-    return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;");
-  }
-
-  async function api(path, opts) {
-    const res = await fetch(path, {
-      headers: { "Content-Type": "application/json" },
-      ...opts,
-    });
-    const isJson = (res.headers.get("content-type") || "").includes("application/json");
-    const data = isJson ? await res.json() : await res.text();
-    if (!res.ok) {
-      const msg = isJson ? (data?.error ? JSON.stringify(data.error) : "ERROR") : String(data);
-      throw new Error(`${res.status} ${res.statusText} - ${msg}`);
-    }
-    return data;
-  }
-
-  function renderRows(rows) {
-    tbody.innerHTML = "";
-    if (!rows || rows.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" class="muted">ไม่พบข้อมูล</td></tr>`;
-      return;
-    }
-
-    for (const d of rows) {
-      const id = d.document_id;
-      const name = d.original_file_name || "-";
-      const mime = d.mime_type || "-";
-      const size = fmtBytes(d.file_size);
-      const p = d.file_path || "-";
-
-      const downloadUrl = `/api/documents/${id}/download`;
-
-      const actionHtml = mode === "normal"
-        ? `
-          <div class="actions">
-            <a href="${downloadUrl}" target="_blank" rel="noopener">
-              <button>ดาวน์โหลด</button>
-            </a>
-            <button data-del="${id}">ลบ (soft)</button>
-          </div>
-          <div class="muted">created_by: ${esc(d.created_by ?? "-")} | created_at: ${esc(d.created_at ?? "-")}</div>
-        `
-        : `
-          <div class="actions">
-            <button data-restore="${id}">กู้คืน</button>
-            <a href="${downloadUrl}" target="_blank" rel="noopener">
-              <button>ดาวน์โหลด</button>
-            </a>
-          </div>
-          <div class="muted">deleted_by: ${esc(d.deleted_by ?? "-")} | deleted_at: ${esc(d.deleted_at ?? "-")}</div>
-        `;
-
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${esc(id)}</td>
-        <td>${esc(name)}</td>
-        <td>${esc(mime)}</td>
-        <td>${esc(size)}</td>
-        <td><span class="muted">${esc(p)}</span></td>
-        <td>${actionHtml}</td>
-      `;
-      tbody.appendChild(tr);
-    }
-  }
-
-  async function load() {
-    try {
-      setStatus("กำลังโหลด...", "muted");
-      const q = qInput.value.trim();
-
-      let url = mode === "trash" ? "/api/documents/trash" : "/api/documents";
-      if (mode === "normal" && q) {
-        url += `?q=${encodeURIComponent(q)}`;
-      }
-
-      const json = await api(url);
-      renderRows(json.data);
-      modePill.textContent = `โหมด: ${mode === "trash" ? "ถังขยะ" : "ปกติ"}`;
-      setStatus("โหลดสำเร็จ", "ok");
-    } catch (e) {
-      console.error(e);
-      setStatus("โหลดไม่สำเร็จ: " + e.message, "bad");
-    }
-  }
-
-  document.getElementById("btnNormal").addEventListener("click", () => {
-    mode = "normal";
-    load();
-  });
-
-  document.getElementById("btnTrash").addEventListener("click", () => {
-    mode = "trash";
-    load();
-  });
-
-  document.getElementById("btnSearch").addEventListener("click", () => {
-    mode = "normal";
-    load();
-  });
-
-  tbody.addEventListener("click", async (e) => {
-    const delId = e.target?.getAttribute?.("data-del");
-    const restoreId = e.target?.getAttribute?.("data-restore");
-
-    try {
-      if (delId) {
-        const deleted_by = deletedByInput.value.trim() || "1";
-        if (!confirm(`ลบเอกสาร ID ${delId} ไปถังขยะ?`)) return;
-        await api(`/api/documents/${delId}`, {
-          method: "DELETE",
-          body: JSON.stringify({ deleted_by }),
-        });
-        setStatus(`ลบ ID ${delId} สำเร็จ`, "ok");
-        await load();
-      }
-
-      if (restoreId) {
-        if (!confirm(`กู้คืนเอกสาร ID ${restoreId}?`)) return;
-        await api(`/api/documents/${restoreId}/restore`, {
-          method: "PATCH",
-        });
-        setStatus(`กู้คืน ID ${restoreId} สำเร็จ`, "ok");
-        await load();
-      }
-    } catch (err) {
-      console.error(err);
-      setStatus("ทำรายการไม่สำเร็จ: " + err.message, "bad");
-    }
-  });
-
-  // โหลดครั้งแรก
-  load();
-</script>
+  <!-- ================= JavaScript ================= -->
+  <script src="assets/js/login.js"></script>
 </body>
 </html>

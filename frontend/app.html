@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>App | ระบบจัดการเอกสารหน่วย IT</title>
+
+  <!-- ฟอนต์ -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- ✅ THEME เดียวกับ Dashboard (สำคัญที่สุด) -->
+  <link rel="stylesheet" href="./assets/css/dashboard.css" />
+
+  <!-- ✅ CSS เฉพาะหน้าแฟ้ม -->
+  <link rel="stylesheet" href="./assets/css/folders.css" />
+
+  <!-- ✅ CSS Modals -->
+  <link rel="stylesheet" href="./assets/css/folders.modal.css" />
+  <link rel="stylesheet" href="./assets/css/folder-create.modal.css" />
+  <link rel="stylesheet" href="./assets/css/documents-upload.modal.css" />
+
+  <!-- ✅ small helpers ที่หน้า app ใช้ แต่ dashboard.css ไม่มี -->
+  <style>
+    .muted { color: rgba(75,0,48,.55); }
+    .page-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      padding: 16px 4px 10px;
+    }
+    .page-head h1{ margin:0; font-size:26px; }
+    .page-head p{ margin:6px 0 0; color: rgba(75,0,48,.55); }
+    .btn-primary{
+      background:#e83e8c;
+      color:#fff;
+    }
+    .panel-scroll{ overflow:auto; }
+    table{ width:100%; border-collapse:collapse; }
+    th,td{ padding:12px 10px; border-bottom:1px solid rgba(120,0,70,.08); text-align:left; }
+    thead th{ font-size:13px; color: rgba(75,0,48,.7); }
+  </style>
+</head>
+
+<body>
+  <!-- Header -->
+  <header class="top-header">
+    <div class="brand">
+      <div class="brand-icon" aria-hidden="true">🖥️</div>
+      <div class="brand-text">
+        <div class="brand-title">ระบบจัดการเอกสารหน่วย IT</div>
+        <div class="brand-sub">โรงพยาบาลธนบุรี ราษฎร์ยินดี</div>
+      </div>
+    </div>
+
+    <div class="userbox">
+      <div class="user-meta">
+        <div class="user-name" id="userName">แอดมิน</div>
+        <div class="user-sub">
+          รหัส: <span id="userCode">admin</span><br/>
+          ROLE: <span class="role" id="userRole">ADMIN</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="btnLogout" type="button">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <!-- Nav -->
+  <nav class="nav">
+    <a class="nav-item" href="./dashboard.html">📊 Dashboard</a>
+    <a class="nav-item active" href="./app.html">📁 แฟ้มเอกสาร</a>
+    <a class="nav-item" href="./app.html#all">📄 เอกสารทั้งหมด</a>
+    <a class="nav-item" href="./app.html#search">🔎 ค้นหา</a>
+    <a class="nav-item" href="./app.html#trash">🗑️ ถังขยะ</a>
+    <a class="nav-item" href="./app.html#settings">⚙️ ตั้งค่า</a>
+    <a class="nav-item" href="./app.html#users">👥 ผู้ใช้</a>
+  </nav>
+
+  <main class="container">
+    <section class="page-head">
+      <div>
+        <h1 id="pageTitle">แฟ้มเอกสาร</h1>
+        <p id="pageDesc">จัดการแฟ้มเอกสารและเอกสารภายในระบบ</p>
+      </div>
+
+      <div>
+        <button class="btn btn-primary" id="btnNew" type="button">+ เพิ่มใหม่</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="panel" id="panelLeft">
+        <div class="panel-head">
+          <h2 id="leftTitle">รายการ</h2>
+          <span class="badge" id="leftBadge">กำลังโหลด…</span>
+        </div>
+        <div class="panel-body" id="leftBody">
+          <div class="muted">พื้นที่แสดงข้อมูลตามเมนูที่เลือก</div>
+        </div>
+      </article>
+
+      <article class="panel" id="panelRight">
+        <div class="panel-head">
+          <h2 id="rightTitle">รายละเอียด</h2>
+          <span class="muted" id="rightHint">เลือกแถวเพื่อดูรายละเอียด</span>
+        </div>
+        <div class="panel-body" id="rightBody">
+          <div class="muted">รายละเอียดจะขึ้นที่นี่</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel panel-bottom">
+      <div class="panel-head">
+        <h2>ตารางตัวอย่าง</h2>
+        <span class="muted">โครงสำหรับต่อ API</span>
+      </div>
+      <div class="panel-body panel-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>รหัส</th>
+              <th>ชื่อ</th>
+              <th>ประเภท</th>
+              <th>อัปเดต</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span id="lastUpdated">อัปเดตล่าสุด: -</span>
+    </footer>
+  </main>
+
+  <!-- ===== Auth Guard (กันเข้าหน้าโดยไม่ login) ===== -->
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "./index.html";
+  </script>
+
+  <!-- ✅ โหลด api ก่อน -->
+  <script src="./assets/js/api.js"></script>
+
+  <!-- ✅ โหลด page modules ก่อน app.js (สำคัญมาก) -->
+  <script src="./assets/js/pages/folders.page.js"></script>
+  <script src="./assets/js/pages/documents.page.js"></script>
+  <script src="./assets/js/pages/trash.page.js"></script>
+  <script src="./assets/js/pages/settings.page.js"></script>
+
+  <!-- ✅ ค่อยโหลด app.js ที่เรียก window.pages.* -->
+  <script src="./assets/js/app.js"></script>
+</body>
+</html>

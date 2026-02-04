@@ -17,10 +17,7 @@ function toInt(value, fallback = null) {
  */
 export async function listDocumentsByFolder(folderId, { limit = 100, offset = 0 } = {}) {
   const folder_id = toInt(folderId, null);
-  if (folder_id === null) {
-    // ให้ controller จัดการ 400 ได้ แต่ service คืน [] จะไม่ทำให้พัง
-    return [];
-  }
+  if (folder_id === null) return [];
 
   const sql = `
     SELECT
@@ -31,6 +28,11 @@ export async function listDocumentsByFolder(folderId, { limit = 100, offset = 0 
       d.file_size,
       d.mime_type,
       d.folder_id,
+
+      -- ✅ NEW: ให้ list เห็นค่าที่บันทึกจาก settings
+      d.document_type_id,
+      d.it_job_type_id,
+
       d.created_by,
       d.created_at,
       d.deleted_at,
@@ -92,6 +94,11 @@ export async function listDocuments({ q, folderId, limit = 20, offset = 0 }) {
       d.file_size,
       d.mime_type,
       d.folder_id,
+
+      -- ✅ NEW
+      d.document_type_id,
+      d.it_job_type_id,
+
       d.created_by,
       d.created_at,
       d.deleted_at,
@@ -116,6 +123,11 @@ export async function listTrash({ limit = 20, offset = 0 }) {
       d.file_size,
       d.mime_type,
       d.folder_id,
+
+      -- ✅ NEW
+      d.document_type_id,
+      d.it_job_type_id,
+
       d.created_by,
       d.created_at,
       d.deleted_at,
@@ -142,6 +154,11 @@ export async function getDocumentById(documentId) {
       d.file_size,
       d.mime_type,
       d.folder_id,
+
+      -- ✅ NEW
+      d.document_type_id,
+      d.it_job_type_id,
+
       d.created_by,
       d.created_at,
       d.deleted_at,
@@ -161,6 +178,8 @@ export async function createDocument({
   file_size,
   mime_type,
   folder_id,
+  document_type_id, // ✅ NEW
+  it_job_type_id,   // ✅ NEW
   created_by,
 }) {
   const sql = `
@@ -171,9 +190,11 @@ export async function createDocument({
       file_size,
       mime_type,
       folder_id,
+      document_type_id,
+      it_job_type_id,
       created_by
     )
-    VALUES ($1, $2, $3, $4, $5, $6, $7)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
     RETURNING
       document_id,
       original_file_name,
@@ -182,6 +203,8 @@ export async function createDocument({
       file_size,
       mime_type,
       folder_id,
+      document_type_id,
+      it_job_type_id,
       created_by,
       created_at,
       deleted_at,
@@ -195,6 +218,8 @@ export async function createDocument({
     file_size != null ? Number(file_size) : null,
     mime_type,
     toInt(folder_id, null),
+    toInt(document_type_id, null),
+    toInt(it_job_type_id, null),
     created_by,
   ];
 

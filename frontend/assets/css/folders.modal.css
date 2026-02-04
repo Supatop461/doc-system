@@ -1,0 +1,86 @@
+/* =========================
+   CREATE FOLDER MODAL
+   ========================= */
+
+.folder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.folder-modal {
+  width: min(640px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.folder-modal-header {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(236, 72, 153, 0.15);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.folder-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #4b0030;
+}
+
+.folder-modal-close {
+  border: none;
+  background: transparent;
+  font-size: 22px;
+  cursor: pointer;
+  color: #9d174d;
+}
+
+.folder-modal-body {
+  padding: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+.folder-modal-body label {
+  font-weight: 700;
+  color: #4b0030;
+  font-size: 14px;
+}
+
+.folder-modal-body input,
+.folder-modal-body select,
+.folder-modal-body textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  outline: none;
+  font-size: 14px;
+}
+
+.folder-modal-body textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.folder-modal-footer {
+  padding: 14px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(236, 72, 153, 0.15);
+}
+
+.folder-modal-error {
+  color: #d62828;
+  font-weight: 700;
+  font-size: 13px;
+}

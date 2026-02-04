@@ -1,0 +1,156 @@
+/* =========================
+   LAYOUT CSS
+   ใช้กับทุกหน้าหลัง Login (Header + เมนู)
+   ========================= */
+
+/* โครงหน้า */
+.app-shell {
+  min-height: 100vh;
+}
+
+/* Header */
+.app-header {
+  background: rgba(255, 255, 255, 0.9);
+  border-bottom: 1px solid rgba(236, 72, 153, 0.15);
+  backdrop-filter: blur(6px);
+}
+
+.app-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+/* ซ้าย: โลโก้ + ชื่อ */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(236, 72, 153, 0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.brand-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.brand-text {
+  line-height: 1.2;
+}
+
+.brand-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ec4899;
+}
+
+.brand-subtitle {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* ขวา: user + logout */
+.userbox {
+  text-align: right;
+  line-height: 1.2;
+}
+
+.user-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.user-meta {
+  font-size: 12px;
+  color: #777;
+  margin-top: 2px;
+}
+
+/* ปุ่มออกจากระบบ */
+.btn-logout {
+  margin-left: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(236, 72, 153, 0.25);
+  background: #fff;
+  color: #ec4899;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.btn-logout:hover {
+  background: rgba(236, 72, 153, 0.06);
+}
+
+/* เมนู (แท็บ) */
+.app-nav {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 10px 16px 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.nav-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  color: #444;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px solid rgba(236, 72, 153, 0.12);
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.nav-item:hover {
+  background: rgba(236, 72, 153, 0.06);
+}
+
+.nav-item.active {
+  background: #ec4899;
+  color: #fff;
+  border-color: transparent;
+}
+
+/* เนื้อหากลางหน้า */
+.app-content {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 18px 16px 30px;
+}
+
+/* มือถือ: ลดความหนาแน่น */
+@media (max-width: 480px) {
+  .brand-title {
+    font-size: 16px;
+  }
+  .brand-subtitle {
+    font-size: 12px;
+  }
+  .btn-logout {
+    padding: 9px 10px;
+  }
+}

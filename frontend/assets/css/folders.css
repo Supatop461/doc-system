@@ -1,0 +1,89 @@
+/* =========================
+   FOLDERS PAGE
+   ========================= */
+
+.folders-breadcrumb {
+  font-size: 13px;
+  color: #9d174d;
+  margin-bottom: 14px;
+}
+
+/* grid wrapper */
+.folder-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* folder card */
+.folder-card {
+  background: #ffffff;
+  border: 1px solid rgba(236, 72, 153, 0.15);
+  border-radius: 18px;
+  padding: 16px 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.folder-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(236, 72, 153, 0.15);
+}
+
+/* left side */
+.folder-info {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+}
+
+.folder-icon {
+  font-size: 34px;
+}
+
+.folder-name {
+  font-weight: 800;
+  font-size: 18px;
+  color: #4b0030;
+}
+
+/* badges */
+.folder-badges {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.folder-badge {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fde7f3;
+  color: #9d174d;
+  font-weight: 600;
+}
+
+/* actions */
+.folder-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.folder-actions .btn {
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-weight: 700;
+}
+
+/* empty state */
+.folder-empty {
+  padding: 18px;
+  text-align: center;
+  color: #9d174d;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px dashed rgba(236, 72, 153, 0.25);
+}

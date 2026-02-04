@@ -9,10 +9,14 @@ import foldersRouter from "./routes/folders.routes.js";
 import documentsRouter from "./routes/documents.routes.js";
 import authRouter from "./routes/auth.routes.js";
 import trashRouter from "./routes/trash.routes.js";
-import { startTrashPurgeJob } from "./jobs/trashPurge.job.js";
+import dashboardRoutes from "./routes/dashboard.routes.js";
+import settingsRouter from "./routes/settings.routes.js";
+import usersRouter from "./routes/users.routes.js";
 
-// ✅ ใช้มาตรฐานใหม่ (เราจะแก้ไฟล์นี้ต่อในขั้นถัดไป)
+
+import { startTrashPurgeJob } from "./jobs/trashPurge.job.js";
 import { authRequired } from "./middlewares/auth.js";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 
@@ -22,7 +26,7 @@ console.log("✅ LOADED src/app.js");
 app.use(express.json({ limit: "10mb" }));
 app.use(express.urlencoded({ extended: true }));
 
-// ✅ CORS (ปรับ origin ได้ตามต้องการ)
+// ✅ CORS
 app.use(
   cors({
     origin: true,
@@ -36,11 +40,18 @@ const __dirname = path.dirname(__filename);
 // ✅ static uploads
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 
+// ✅ dashboard routes (ถ้าเป็น backend route)
+app.use("/dashboard", dashboardRoutes);
+
 // ✅ API
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
 app.use("/api/auth", authRouter);
 app.use("/api/folders", foldersRouter);
 app.use("/api/documents", documentsRouter);
 app.use("/api/trash", trashRouter);
+app.use("/api", settingsRouter);
+app.use("/api/users", usersRouter);
 
 // ✅ me
 app.get("/api/me", authRequired, (req, res) => {
@@ -52,20 +63,14 @@ const frontendPath = path.resolve(__dirname, "../../frontend");
 app.use(express.static(frontendPath));
 
 // ✅ fallback สำหรับ SPA (กันชน /api)
-app.get(/^(?!\/api).*/, (req, res) => {
+app.get(/^(?!\/api).*/, (_req, res) => {
   res.sendFile(path.join(frontendPath, "index.html"));
 });
 
-// ✅ Global error handler (ต้องอยู่ท้ายสุดก่อน export)
-app.use((err, req, res, next) => {
-  console.error("🔥 ERROR:", err);
-  const status = err.status || 500;
-  res.status(status).json({
-    message: err.message || "Internal Server Error",
-  });
-});
+// ✅ Global error handler (ต้องอยู่ท้ายสุด)
+app.use(errorHandler);
 
-// ✅ start jobs (คงไว้เหมือนเดิม)
+// ✅ start jobs
 startTrashPurgeJob();
 
 export default app;

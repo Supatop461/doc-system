@@ -37,7 +37,7 @@ export const authRequired = (req, res, next) => {
 };
 
 export const requireAdmin = (req, res, next) => {
-  // ต้องผ่าน authRequired มาก่อน
+  
   if (!req.user || req.user.role !== "admin") {
     return res.status(403).json({ message: "ต้องเป็น admin เท่านั้น" });
   }

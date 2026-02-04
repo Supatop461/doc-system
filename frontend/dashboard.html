@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard | ระบบจัดการเอกสารหน่วย IT</title>
+
+  <!-- ฟอนต์ (ใกล้เคียงในภาพ) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="./assets/css/dashboard.css" />
+  <link rel="stylesheet" href="./assets/css/theme.css" />
+</head>
+
+<body>
+  <!-- Top Header -->
+  <header class="top-header">
+    <div class="brand">
+      <div class="brand-text">
+        <div class="brand-title">ระบบจัดการเอกสารหน่วย IT</div>
+        <div class="brand-sub">โรงพยาบาลธนบุรี ราษฎร์ยินดี</div>
+      </div>
+    </div>
+
+    <div class="userbox">
+      <div class="user-meta">
+        <div class="user-name" id="userName">แอดมิน</div>
+        <div class="user-sub">
+          รหัส: <span id="userCode">admin</span><br/>
+          ROLE: <span class="role" id="userRole">ADMIN</span>
+        </div>
+      </div>
+      <button class="btn btn-ghost" id="btnLogout" type="button">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <!-- Navbar -->
+  <nav class="nav">
+    <a class="nav-item active" href="./dashboard.html">📊 Dashboard</a>
+    <a class="nav-item" href="./app.html">📁 แฟ้มเอกสาร</a>
+    <a class="nav-item" href="./app.html#all">📄 เอกสารทั้งหมด</a>
+    <a class="nav-item" href="./app.html#search">🔎 ค้นหา</a>
+    <a class="nav-item" href="./app.html#trash">🗑️ ถังขยะ</a>
+    <a class="nav-item" href="./app.html#stats">📈 สถิติ</a>
+    <a class="nav-item" href="./app.html#settings">⚙️ ตั้งค่า</a>
+    <a class="nav-item" href="./app.html#users">👥 ผู้ใช้</a>
+  </nav>
+
+  <!-- Main -->
+  <main class="container">
+    <section class="headline">
+      <div>
+        <h1>Dashboard</h1>
+        <p>ภาพรวมเอกสาร</p>
+      </div>
+
+      <div class="headline-actions">
+        <button class="btn btn-danger" id="btnRefresh" type="button">ล้างข้อมูลเดิม</button>
+      </div>
+    </section>
+
+    <!-- KPI Cards -->
+    <section class="kpi-grid">
+      <article class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" aria-hidden="true">📄</div>
+          <span class="kpi-tag tag-pink">ทั้งหมด</span>
+        </div>
+        <div class="kpi-value" id="kDocs">0</div>
+        <div class="kpi-label">เอกสารทั้งหมด</div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" aria-hidden="true">📁</div>
+          <span class="kpi-tag tag-green">แฟ้ม</span>
+        </div>
+        <div class="kpi-value" id="kFolders">0</div>
+        <div class="kpi-label">แฟ้มเอกสาร</div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" aria-hidden="true">📎</div>
+          <span class="kpi-tag tag-yellow">Files</span>
+        </div>
+        <div class="kpi-value" id="kFiles">0</div>
+        <div class="kpi-label">ไฟล์แนบทั้งหมด</div>
+      </article>
+
+      <article class="kpi-card">
+        <div class="kpi-top">
+          <div class="kpi-icon" aria-hidden="true">👁️</div>
+          <span class="kpi-tag tag-blue">Today</span>
+        </div>
+        <div class="kpi-value" id="kViewsToday">0</div>
+        <div class="kpi-label">เปิดดูวันนี้</div>
+      </article>
+    </section>
+
+    <!-- Content Grid -->
+    <section class="content-grid">
+      <!-- Latest documents -->
+      <article class="panel">
+        <div class="panel-head">
+          <h2>เอกสารล่าสุด</h2>
+        </div>
+        <div class="panel-body" id="latestDocs"></div>
+      </article>
+
+      <!-- Latest activities -->
+      <article class="panel">
+        <div class="panel-head">
+          <h2>กิจกรรมล่าสุด</h2>
+        </div>
+        <div class="panel-body" id="latestActs"></div>
+      </article>
+    </section>
+
+    <footer class="footer">
+      <span id="lastUpdated">อัปเดตล่าสุด: -</span>
+    </footer>
+  </main>
+
+  <!-- ===== Auth Guard (กันเข้าหน้าโดยไม่ login) ===== -->
+  <script>
+    const token = localStorage.getItem("token");
+    if (!token) window.location.href = "./index.html";
+  </script>
+
+  <!-- โหลด api ก่อน dashboard -->
+  <script src="./assets/js/api.js"></script>
+  <script src="./assets/js/dashboard.js"></script>
+</body>
+</html>

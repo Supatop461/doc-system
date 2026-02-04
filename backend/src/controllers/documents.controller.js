@@ -4,6 +4,10 @@ import fs from "fs";
 import path from "path";
 import * as docs from "../services/documents.service.js";
 
+// =========================
+// Schemas
+// =========================
+
 // ✅ รองรับทั้ง folder_id และ folderId
 const listQuerySchema = z.object({
   q: z.string().trim().min(1).optional(),
@@ -15,8 +19,17 @@ const listQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+// ✅ รองรับทั้งเลข / uuid-ish / nanoid-ish (ให้สอดคล้องกับ routes)
 const idParamSchema = z.object({
-  id: z.coerce.number().int().positive(),
+  id: z
+    .string()
+    .min(1)
+    .refine((v) => {
+      if (/^\d+$/.test(v)) return true; // integer
+      if (/^[0-9a-fA-F-]{10,}$/.test(v)) return true; // uuid-ish
+      if (/^[0-9a-zA-Z_-]{10,}$/.test(v)) return true; // nanoid/ulid-ish
+      return false;
+    }, "INVALID_ID"),
 });
 
 // (optional) ถ้าคุณยังอยากมี create แบบยิง JSON ตรง ๆ ก็เก็บไว้ได้
@@ -30,6 +43,47 @@ const createSchema = z.object({
   folder_id: z.coerce.number().int().positive().nullable().optional(),
   created_by: z.string().trim().min(1),
 });
+
+// =========================
+// Helpers
+// =========================
+
+function getUploadsRoot() {
+  return path.resolve(process.cwd(), process.env.UPLOAD_PATH || "uploads");
+}
+
+/**
+ * resolve path จาก doc.file_path ให้เป็น absolute + ตรวจให้ปลอดภัย
+ * รองรับทั้ง:
+ *  - file_path เก็บเป็น absolute
+ *  - file_path เก็บเป็น relative เช่น "uploads/xxx.pdf" หรือ "xxx.pdf"
+ */
+function resolveSafeAbsPath(filePath) {
+  if (!filePath) return { ok: false, error: "NO_FILE_PATH" };
+
+  const uploadsRoot = getUploadsRoot();
+
+  // 1) ทำให้เป็น absolute
+  let absFilePath;
+  if (path.isAbsolute(filePath)) {
+    absFilePath = path.resolve(filePath);
+  } else {
+    // ถ้าใน db เก็บ "uploads/..." หรือ "xxx" ให้ resolve จาก cwd
+    absFilePath = path.resolve(process.cwd(), filePath);
+  }
+
+  // 2) กัน path traversal: ต้องอยู่ใต้ uploadsRoot เท่านั้น
+  const rel = path.relative(uploadsRoot, absFilePath);
+  if (rel.startsWith("..") || path.isAbsolute(rel)) {
+    return { ok: false, error: "INVALID_FILE_PATH" };
+  }
+
+  return { ok: true, uploadsRoot, absFilePath };
+}
+
+// =========================
+// Controllers
+// =========================
 
 export async function listDocuments(req, res) {
   try {
@@ -57,7 +111,9 @@ export async function listDocuments(req, res) {
 export async function getDocument(req, res) {
   try {
     const parsed = idParamSchema.safeParse(req.params);
-    if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_ID" });
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: "INVALID_ID" });
+    }
 
     const row = await docs.getDocumentById(parsed.data.id);
     if (!row) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
@@ -73,7 +129,9 @@ export async function getDocument(req, res) {
 export async function createDocument(req, res) {
   try {
     const parsed = createSchema.safeParse(req.body);
-    if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+    if (!parsed.success) {
+      return res.status(400).json({ ok: false, error: parsed.error.flatten() });
+    }
 
     const created = await docs.createDocument(parsed.data);
     return res.status(201).json({ ok: true, data: created });
@@ -83,7 +141,7 @@ export async function createDocument(req, res) {
   }
 }
 
-// ✅ download
+// ✅ download (attachment)
 export async function downloadDocument(req, res) {
   try {
     const parsed = idParamSchema.safeParse(req.params);
@@ -91,33 +149,66 @@ export async function downloadDocument(req, res) {
 
     const doc = await docs.getDocumentById(parsed.data.id);
     if (!doc) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
-    if (!doc.file_path) return res.status(400).json({ ok: false, error: "NO_FILE_PATH" });
 
-    // uploads root (ควรตรงกับที่ upload controller ใช้)
-    const uploadsRoot = path.resolve(process.cwd(), process.env.UPLOAD_PATH || "uploads");
-    const absFilePath = path.resolve(doc.file_path);
+    const resolved = resolveSafeAbsPath(doc.file_path);
+    if (!resolved.ok) return res.status(400).json({ ok: false, error: resolved.error });
 
-    // ✅ กัน path traversal แบบชัวร์
-    const rel = path.relative(uploadsRoot, absFilePath);
-    if (rel.startsWith("..") || path.isAbsolute(rel)) {
-      return res.status(400).json({ ok: false, error: "INVALID_FILE_PATH" });
-    }
+    const { absFilePath } = resolved;
 
     if (!fs.existsSync(absFilePath)) {
       return res.status(404).json({ ok: false, error: "FILE_NOT_FOUND" });
     }
 
+    // filename
+    const filename = doc.original_file_name || `document_${doc.document_id || parsed.data.id}`;
+
     res.setHeader("Content-Type", doc.mime_type || "application/octet-stream");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(
-        doc.original_file_name || `document_${doc.document_id}`
-      )}"`
+      `attachment; filename="${encodeURIComponent(filename)}"`
     );
 
     fs.createReadStream(absFilePath).pipe(res);
   } catch (err) {
     console.error("downloadDocument error:", err);
+    return res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+}
+
+/**
+ * ✅ preview (inline)
+ * ใช้กับ modal preview: PDF/รูป จะเปิดใน browser ได้
+ * หมายเหตุ: ฝั่ง frontend ใช้ <iframe src="/api/documents/:id/preview"> ได้เลย
+ */
+export async function previewDocument(req, res) {
+  try {
+    const parsed = idParamSchema.safeParse(req.params);
+    if (!parsed.success) return res.status(400).json({ ok: false, error: "INVALID_ID" });
+
+    const doc = await docs.getDocumentById(parsed.data.id);
+    if (!doc) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
+
+    const resolved = resolveSafeAbsPath(doc.file_path);
+    if (!resolved.ok) return res.status(400).json({ ok: false, error: resolved.error });
+
+    const { absFilePath } = resolved;
+
+    if (!fs.existsSync(absFilePath)) {
+      return res.status(404).json({ ok: false, error: "FILE_NOT_FOUND" });
+    }
+
+    const filename = doc.original_file_name || `document_${doc.document_id || parsed.data.id}`;
+
+    // inline preview
+    res.setHeader("Content-Type", doc.mime_type || "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${encodeURIComponent(filename)}"`
+    );
+
+    fs.createReadStream(absFilePath).pipe(res);
+  } catch (err) {
+    console.error("previewDocument error:", err);
     return res.status(500).json({ ok: false, error: "SERVER_ERROR" });
   }
 }

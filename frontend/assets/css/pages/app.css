@@ -1,0 +1,38 @@
+/* assets/css/pages/app.css */
+
+.page-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  padding:16px 4px 10px;
+}
+
+.page-head h1{
+  margin:0;
+  font-size:26px;
+}
+
+.page-head p{
+  margin:6px 0 0;
+  color: var(--muted);
+}
+
+/* badge ด้านบนหัว panel */
+.badge{
+  font-size:12px;
+  padding:6px 10px;
+  border-radius:999px;
+  border:1px solid rgba(232,62,140,.25);
+  background: rgba(232,62,140,.12);
+  color:#a10055;
+  font-weight:700;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+}
+
+.footer{
+  color: var(--muted);
+  padding: 14px 4px 24px;
+}

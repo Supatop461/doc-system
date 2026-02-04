@@ -1,10 +1,6 @@
 // src/routes/trash.routes.js
 import express from "express";
 import pool from "../db/pool.js";
-
-import fs from "fs/promises";
-import path from "path";
-
 import { authRequired, requireAdmin } from "../middlewares/auth.js";
 
 const router = express.Router();
@@ -20,13 +16,20 @@ function isValidId(id) {
 /**
  * GET /api/trash
  * list documents in trash
- * ✅ admin only
+ * ✅ admin only (ถ้าจะให้ user เห็นด้วย เอา requireAdmin ออก)
  */
-router.get("/", authRequired, requireAdmin, async (req, res) => {
+router.get("/", authRequired, requireAdmin, async (_req, res) => {
   try {
     const { rows } = await pool.query(
       `
       SELECT
+        -- ✅ alias ให้ frontend ใช้ง่าย
+        document_id AS id,
+        original_file_name AS name,
+        mime_type AS type,
+        deleted_at AS updated_at,
+
+        -- ✅ fields เดิม (คงไว้ครบ)
         document_id,
         original_file_name,
         stored_file_name,
@@ -36,7 +39,7 @@ router.get("/", authRequired, requireAdmin, async (req, res) => {
         folder_id,
         created_by,
         created_at,
-        updated_at,
+        updated_at AS updated_at_orig,
         deleted_at,
         deleted_by,
         document_type_id,
@@ -48,6 +51,7 @@ router.get("/", authRequired, requireAdmin, async (req, res) => {
       `
     );
 
+    // ✅ คงรูปแบบเดิมของคุณ: { items: [...] }
     res.json({ items: rows });
   } catch (err) {
     console.error("TRASH LIST error:", err);
@@ -55,11 +59,8 @@ router.get("/", authRequired, requireAdmin, async (req, res) => {
   }
 });
 
-/**
- * PATCH /api/trash/:document_id/restore
- * ✅ admin only
- */
-router.patch("/:document_id/restore", authRequired, requireAdmin, async (req, res) => {
+// ===== restore handler (ใช้ร่วมกัน) =====
+async function restoreHandler(req, res) {
   try {
     const { document_id } = req.params;
 
@@ -80,80 +81,40 @@ router.patch("/:document_id/restore", authRequired, requireAdmin, async (req, re
     );
 
     if (!rowCount) return res.status(404).json({ message: "NOT_FOUND_IN_TRASH" });
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (err) {
     console.error("TRASH RESTORE error:", err);
-    res.status(500).json({ message: "TRASH_RESTORE_FAILED" });
+    return res.status(500).json({ message: "TRASH_RESTORE_FAILED" });
   }
-});
+}
 
 /**
- * DELETE /api/trash/:document_id
- * permanently delete (admin only) + delete file on disk
+ * ✅ POST /api/trash/:document_id/restore
  */
-router.delete("/:document_id", authRequired, requireAdmin, async (req, res) => {
-  const { document_id } = req.params;
+router.post("/:document_id/restore", authRequired, requireAdmin, restoreHandler);
 
-  if (!isValidId(document_id)) {
-    return res.status(400).json({ message: "INVALID_DOCUMENT_ID" });
-  }
+/**
+ * ✅ PATCH /api/trash/:document_id/restore
+ */
+router.patch("/:document_id/restore", authRequired, requireAdmin, restoreHandler);
 
-  const client = await pool.connect();
+/**
+ * ❌ ตัดลบถาวรออกทั้งหมด
+ * - เดิมมี:
+ *   DELETE /api/trash/:document_id
+ *   DELETE /api/trash  (ล้างถัง)
+ * - ตอนนี้ "ไม่รองรับ" แล้ว เพื่อความปลอดภัย
+ */
+router.delete("/:document_id", authRequired, requireAdmin, (_req, res) => {
+  return res.status(405).json({
+    message: "PERMANENT_DELETE_DISABLED",
+  });
+});
 
-  try {
-    await client.query("BEGIN");
-
-    // 1) หา doc ใน trash
-    const found = await client.query(
-      `
-      SELECT document_id, file_path
-      FROM documents
-      WHERE document_id = $1
-        AND deleted_at IS NOT NULL
-      `,
-      [document_id]
-    );
-
-    if (!found.rowCount) {
-      await client.query("ROLLBACK");
-      return res.status(404).json({ message: "NOT_FOUND_IN_TRASH" });
-    }
-
-    const filePath = found.rows[0].file_path;
-
-    // 2) ลบ record
-    await client.query(`DELETE FROM documents WHERE document_id = $1`, [document_id]);
-
-    await client.query("COMMIT");
-
-    // 3) ลบไฟล์จริง (หลัง commit) + กันลบไฟล์นอก uploads
-    if (filePath) {
-      const uploadsRoot = path.resolve(process.cwd(), process.env.UPLOAD_PATH || "uploads");
-
-      const absPath = path.isAbsolute(filePath)
-        ? filePath
-        : path.resolve(process.cwd(), filePath);
-
-      const rel = path.relative(uploadsRoot, absPath);
-      const safeToDelete = !(rel.startsWith("..") || path.isAbsolute(rel));
-
-      if (safeToDelete) {
-        try {
-          await fs.unlink(absPath);
-        } catch {
-          // ไฟล์อาจถูกลบไปแล้ว ไม่ถือว่า error
-        }
-      }
-    }
-
-    res.json({ ok: true });
-  } catch (err) {
-    await client.query("ROLLBACK");
-    console.error("TRASH DELETE error:", err);
-    res.status(500).json({ message: "TRASH_DELETE_FAILED" });
-  } finally {
-    client.release();
-  }
+router.delete("/", authRequired, requireAdmin, (_req, res) => {
+  return res.status(405).json({
+    message: "EMPTY_TRASH_DISABLED",
+  });
 });
 
 export default router;

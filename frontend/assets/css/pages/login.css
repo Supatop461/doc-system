@@ -1,0 +1,56 @@
+/* =========================
+   LOGIN PAGE CSS
+   ใช้เฉพาะหน้า Login
+   ========================= */
+
+/* จัดกลางจอ */
+.page-center {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* การ์ด login */
+.login-card {
+  width: 380px;
+}
+
+/* โลโก้ (ภาพเดียว) */
+.logo {
+  width: 250px;      
+  height: 200px;
+  margin: 0 auto 20px;   
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo img {
+  width: 110%;
+  height: 110%;
+  object-fit: contain;  
+  display: block;
+}
+
+
+/* ชื่อระบบ */
+.title {
+  text-align: center;
+  color: #ec4899;
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  text-align: center;
+  font-size: 14px;
+  color: #666;
+}
+
+.unit {
+  text-align: center;
+  font-size: 13px;
+  color: #888;
+  margin-top: 6px;
+}
+

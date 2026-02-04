@@ -1,0 +1,156 @@
+/* =========================
+   CREATE FOLDER MODAL
+   ========================= */
+
+.folder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.35);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.folder-modal {
+  width: min(520px, 100%);
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,.2);
+  border: 1px solid rgba(236,72,153,.2);
+}
+
+.folder-modal-header {
+  padding: 14px 18px;
+  display: flex;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.folder-modal-header h3 {
+  margin: 0;
+  color: #831843;
+}
+
+.folder-modal-body {
+  padding: 18px;
+}
+
+.folder-modal-body label {
+  font-weight: 700;
+  color: #831843;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.folder-modal-body input,
+.folder-modal-body select {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,.15);
+  margin-bottom: 14px;
+}
+
+.folder-modal-footer {
+  padding: 14px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+}
+
+.folder-error {
+  color: #dc2626;
+  font-weight: 700;
+  display: none;
+  margin-bottom: 10px;
+}
+/* frontend/assets/css/pages/folder-create.modal.css */
+/* =========================
+   CREATE FOLDER MODAL (polished)
+   ========================= */
+
+.folder-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.40);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.folder-modal {
+  width: min(560px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  border: 1px solid rgba(236,72,153,.22);
+  overflow: hidden;
+}
+
+.folder-modal-header {
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(180deg, rgba(252,231,243,.85), rgba(255,255,255,1));
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.folder-modal-header h3 {
+  margin: 0;
+  color: #831843;
+  font-weight: 900;
+}
+
+.folder-modal-body {
+  padding: 18px;
+}
+
+.folder-modal-body label {
+  font-weight: 900;
+  color: #831843;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.folder-modal-body input,
+.folder-modal-body select,
+.folder-modal-body textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.15);
+  margin-bottom: 14px;
+  outline: none;
+}
+
+.folder-modal-body input:focus,
+.folder-modal-body select:focus,
+.folder-modal-body textarea:focus {
+  border-color: rgba(236,72,153,.55);
+  box-shadow: 0 0 0 4px rgba(236,72,153,.12);
+}
+
+.folder-modal-footer {
+  padding: 14px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+}
+
+.folder-error {
+  color: #b91c1c;
+  font-weight: 900;
+  display: none;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fee2e2;
+  border: 1px solid rgba(185,28,28,.2);
+}

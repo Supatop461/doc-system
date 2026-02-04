@@ -1,11 +1,13 @@
 // src/routes/documents.routes.js
 import { Router } from "express";
 import { authRequired } from "../middlewares/auth.js";
+import pool from "../db/pool.js";
 
 import {
   listDocuments,
   getDocument,
   downloadDocument,
+  previewDocument,
 } from "../controllers/documents.controller.js";
 
 import {
@@ -15,31 +17,64 @@ import {
 
 const router = Router();
 
-// helper: validate id (รองรับเลขและ uuid-ish)
+// =========================
+// Helpers
+// =========================
 function isValidId(id) {
   if (!id) return false;
-  if (/^\d+$/.test(id)) return true;            // integer id
-  if (/^[0-9a-fA-F-]{10,}$/.test(id)) return true; // uuid-ish
+
+  // integer id
+  if (/^\d+$/.test(id)) return true;
+
+  // uuid v4-ish (รองรับ uuid มาตรฐาน)
+  if (
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+      id
+    )
+  ) {
+    return true;
+  }
+
+  // id เป็น string ยาวๆ (เช่น nanoid/ulid)
+  if (/^[0-9a-zA-Z_-]{10,}$/.test(id)) return true;
+
   return false;
 }
 
-// helper: enforce multipart on upload routes (กันส่ง json แล้ว multer งง)
 function requireMultipart(req, res, next) {
-  const ct = req.headers["content-type"] || "";
+  const ct = String(req.headers["content-type"] || "");
   if (!ct.includes("multipart/form-data")) {
     return res.status(415).json({
       ok: false,
-      message: "Content-Type must be multipart/form-data",
+      message: "Content-Type ต้องเป็น multipart/form-data",
     });
   }
-  next();
+  return next();
 }
 
-/**
- * ✅ backward compatible
- * POST /api/documents/upload
- * (ต้องอยู่ก่อน /:id)
- */
+function validateIdParam(req, res, next) {
+  if (!isValidId(req.params.id)) {
+    return res.status(400).json({ ok: false, message: "INVALID_ID" });
+  }
+  return next();
+}
+
+function getNumericUserId(req) {
+  const userIdRaw =
+    req.user?.user_id ??
+    req.user?.id ??
+    req.user?.userId ??
+    req.user?.created_by_user_id;
+
+  const n = Number(userIdRaw);
+  return Number.isFinite(n) ? n : null;
+}
+
+// =========================
+// Routes
+// =========================
+
+// --- Upload (รองรับทั้ง POST / และ POST /upload) ---
 router.post(
   "/upload",
   authRequired,
@@ -48,18 +83,6 @@ router.post(
   uploadDocument
 );
 
-/**
- * STEP 9:
- * GET /api/documents?folder_id=...
- * user + admin
- */
-router.get("/", authRequired, listDocuments);
-
-/**
- * STEP 9:
- * POST /api/documents (Upload file จริง + insert DB)
- * user + admin
- */
 router.post(
   "/",
   authRequired,
@@ -68,26 +91,95 @@ router.post(
   uploadDocument
 );
 
+// --- List documents (ควรเป็นรายการที่ไม่อยู่ในถังขยะ) ---
+router.get("/", authRequired, listDocuments);
+
 /**
- * STEP 9:
- * GET /api/documents/:id/download
- * user + admin
+ * ✅ DELETE /api/documents/:id
+ * ย้ายเข้า "ถังขยะ" (soft delete)
+ * FIX: deleted_by เป็น BIGINT -> ต้องส่ง user_id (ตัวเลข)
  */
-router.get("/:id/download", authRequired, (req, res, next) => {
-  if (!isValidId(req.params.id)) {
-    return res.status(400).json({ ok: false, message: "INVALID_ID" });
+router.delete("/:id", authRequired, validateIdParam, async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const deletedBy = getNumericUserId(req);
+    if (deletedBy === null) {
+      return res.status(400).json({
+        ok: false,
+        message: "INVALID_USER_ID_FOR_DELETE",
+      });
+    }
+
+    const { rowCount } = await pool.query(
+      `
+      UPDATE documents
+      SET deleted_at = NOW(),
+          deleted_by = $2,
+          updated_at = NOW()
+      WHERE document_id = $1
+        AND deleted_at IS NULL
+      `,
+      [id, deletedBy]
+    );
+
+    if (!rowCount) {
+      return res
+        .status(404)
+        .json({ ok: false, message: "NOT_FOUND_OR_ALREADY_DELETED" });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("DOCUMENT DELETE error:", err);
+    return res.status(500).json({ ok: false, message: "DOCUMENT_DELETE_FAILED" });
   }
-  return downloadDocument(req, res, next);
 });
 
 /**
- * (optional) ดูรายละเอียดเอกสาร
- * user + admin
+ * OPTIONAL: restore ผ่าน documents ก็ได้ (แต่หลักๆ แนะนำใช้ /api/trash)
  */
-router.get("/:id", authRequired, (req, res, next) => {
-  if (!isValidId(req.params.id)) {
-    return res.status(400).json({ ok: false, message: "INVALID_ID" });
+async function restoreDocHandler(req, res) {
+  try {
+    const { id } = req.params;
+
+    const { rowCount } = await pool.query(
+      `
+      UPDATE documents
+      SET deleted_at = NULL,
+          deleted_by = NULL,
+          updated_at = NOW()
+      WHERE document_id = $1
+        AND deleted_at IS NOT NULL
+      `,
+      [id]
+    );
+
+    if (!rowCount) {
+      return res.status(404).json({ ok: false, message: "NOT_FOUND_IN_TRASH" });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("DOCUMENT RESTORE error:", err);
+    return res.status(500).json({ ok: false, message: "DOCUMENT_RESTORE_FAILED" });
   }
+}
+
+router.post("/:id/restore", authRequired, validateIdParam, restoreDocHandler);
+router.patch("/:id/restore", authRequired, validateIdParam, restoreDocHandler);
+
+// --- Preview/Download ต้องมาก่อน GET /:id ---
+router.get("/:id/preview", authRequired, validateIdParam, (req, res, next) => {
+  return previewDocument(req, res, next);
+});
+
+router.get("/:id/download", authRequired, validateIdParam, (req, res, next) => {
+  return downloadDocument(req, res, next);
+});
+
+// --- Get document detail ---
+router.get("/:id", authRequired, validateIdParam, (req, res, next) => {
   return getDocument(req, res, next);
 });
 
