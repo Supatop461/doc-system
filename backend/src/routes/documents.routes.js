@@ -8,6 +8,7 @@ import {
   getDocument,
   downloadDocument,
   previewDocument,
+  renameDocument, // ✅ NEW: rename title
 } from "../controllers/documents.controller.js";
 
 import {
@@ -93,6 +94,15 @@ router.post(
 
 // --- List documents (ควรเป็นรายการที่ไม่อยู่ในถังขยะ) ---
 router.get("/", authRequired, listDocuments);
+
+/**
+ * ✅ PATCH /api/documents/:id
+ * แก้ชื่อเอกสาร (title)
+ * body: { title: "..." }
+ */
+router.patch("/:id", authRequired, validateIdParam, (req, res, next) => {
+  return renameDocument(req, res, next);
+});
 
 /**
  * ✅ DELETE /api/documents/:id

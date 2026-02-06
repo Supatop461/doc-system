@@ -12,6 +12,8 @@ import trashRouter from "./routes/trash.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import settingsRouter from "./routes/settings.routes.js";
 import usersRouter from "./routes/users.routes.js";
+import documentTypesRouter from "./routes/documentTypes.routes.js";
+import itJobTypesRouter from "./routes/itJobTypes.routes.js";
 
 
 import { startTrashPurgeJob } from "./jobs/trashPurge.job.js";
@@ -52,7 +54,8 @@ app.use("/api/documents", documentsRouter);
 app.use("/api/trash", trashRouter);
 app.use("/api", settingsRouter);
 app.use("/api/users", usersRouter);
-
+app.use("/api/document-types", documentTypesRouter);
+app.use("/api/it-job-types", itJobTypesRouter);
 // ✅ me
 app.get("/api/me", authRequired, (req, res) => {
   res.json({ me: req.user });

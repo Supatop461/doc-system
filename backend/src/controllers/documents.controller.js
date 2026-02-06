@@ -44,6 +44,11 @@ const createSchema = z.object({
   created_by: z.string().trim().min(1),
 });
 
+// ✅ NEW: rename title
+const renameSchema = z.object({
+  title: z.string().trim().min(1).max(255),
+});
+
 // =========================
 // Helpers
 // =========================
@@ -79,6 +84,42 @@ function resolveSafeAbsPath(filePath) {
   }
 
   return { ok: true, uploadsRoot, absFilePath };
+}
+
+function safeHeaderFilename(name = "") {
+  // กันตัวอักษรควบคุมที่ทำให้ header แตก
+  return String(name).replace(/[\r\n"]/g, "").trim();
+}
+
+/**
+ * ✅ ทำ Content-Disposition รองรับชื่อไทยด้วย filename*
+ * - ใส่ทั้ง filename="ascii-ish" และ filename*=UTF-8''...
+ */
+function setContentDisposition(res, type, filename) {
+  const clean = safeHeaderFilename(filename) || "download";
+  const encoded = encodeURIComponent(clean);
+
+  // fallback แบบไม่ทำให้ header พัง (แทนตัวอักษรที่ไม่ใช่ ASCII)
+  const fallback = clean.replace(/[^\x20-\x7E]/g, "_") || "download";
+
+  res.setHeader(
+    "Content-Disposition",
+    `${type}; filename="${fallback}"; filename*=UTF-8''${encoded}`
+  );
+}
+
+function pickDownloadName(doc, fallbackId) {
+  // ✅ ให้ชื่อดาวน์โหลดอิง title ก่อน (เพราะ title แก้ได้)
+  const base = doc?.title?.trim()
+    ? doc.title.trim()
+    : doc?.original_file_name?.trim()
+    ? doc.original_file_name.trim()
+    : `document_${doc?.document_id || fallbackId}`;
+
+  // พยายามคงนามสกุลเดิมจาก original_file_name (ถ้ามี)
+  const ext = path.extname(String(doc?.original_file_name || "")).trim();
+  if (ext && !base.toLowerCase().endsWith(ext.toLowerCase())) return `${base}${ext}`;
+  return base;
 }
 
 // =========================
@@ -141,6 +182,30 @@ export async function createDocument(req, res) {
   }
 }
 
+// ✅ NEW: rename title (แก้ชื่อเอกสารให้หน้า list เปลี่ยนจริง)
+export async function renameDocument(req, res) {
+  try {
+    const p = idParamSchema.safeParse(req.params);
+    if (!p.success) return res.status(400).json({ ok: false, error: "INVALID_ID" });
+
+    const b = renameSchema.safeParse(req.body);
+    if (!b.success) {
+      return res.status(400).json({ ok: false, error: b.error.flatten() });
+    }
+
+    const updated = await docs.renameDocumentTitle({
+      id: p.data.id,
+      title: b.data.title,
+    });
+
+    if (!updated) return res.status(404).json({ ok: false, error: "NOT_FOUND" });
+    return res.json({ ok: true, data: updated });
+  } catch (err) {
+    console.error("renameDocument error:", err);
+    return res.status(500).json({ ok: false, error: "SERVER_ERROR" });
+  }
+}
+
 // ✅ download (attachment)
 export async function downloadDocument(req, res) {
   try {
@@ -159,14 +224,10 @@ export async function downloadDocument(req, res) {
       return res.status(404).json({ ok: false, error: "FILE_NOT_FOUND" });
     }
 
-    // filename
-    const filename = doc.original_file_name || `document_${doc.document_id || parsed.data.id}`;
+    const filename = pickDownloadName(doc, parsed.data.id);
 
     res.setHeader("Content-Type", doc.mime_type || "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(filename)}"`
-    );
+    setContentDisposition(res, "attachment", filename);
 
     fs.createReadStream(absFilePath).pipe(res);
   } catch (err) {
@@ -197,14 +258,10 @@ export async function previewDocument(req, res) {
       return res.status(404).json({ ok: false, error: "FILE_NOT_FOUND" });
     }
 
-    const filename = doc.original_file_name || `document_${doc.document_id || parsed.data.id}`;
+    const filename = pickDownloadName(doc, parsed.data.id);
 
-    // inline preview
     res.setHeader("Content-Type", doc.mime_type || "application/octet-stream");
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${encodeURIComponent(filename)}"`
-    );
+    setContentDisposition(res, "inline", filename);
 
     fs.createReadStream(absFilePath).pipe(res);
   } catch (err) {

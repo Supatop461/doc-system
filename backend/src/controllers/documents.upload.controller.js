@@ -37,11 +37,31 @@ function toInt(value) {
   return Number.isInteger(n) ? n : null;
 }
 
+/**
+ * ✅ แก้ปัญหาชื่อไฟล์ไทยเพี้ยนเป็น à¸...
+ * บางเครื่อง multer/busboy ส่ง originalname เป็น latin1 ทั้งที่จริงเป็น utf8 bytes
+ */
+function fixOriginalName(name = "") {
+  try {
+    const restored = Buffer.from(String(name), "latin1").toString("utf8");
+    // ถ้าแปลงแล้วเกิด � แปลว่าเดิมน่าจะถูกอยู่ → คืนค่าเดิม
+    const bad = (restored.match(/�/g) || []).length;
+    if (bad > 0) return String(name);
+    return restored;
+  } catch {
+    return String(name);
+  }
+}
+
 // ========== multer config ==========
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    const base = path.basename(file.originalname);
+    // ✅ ใช้ชื่อที่ fix แล้วเป็นฐานก่อน sanitize
+    const fixed = fixOriginalName(file.originalname);
+    const base = path.basename(fixed);
+
+    // ชื่อไฟล์ที่ "เก็บจริง" ขอให้เป็น safe ascii (กันปัญหา path/OS)
     const safeBase = base.replace(/[^a-zA-Z0-9._-]/g, "_");
     const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     cb(null, `${unique}-${safeBase}`);
@@ -75,8 +95,12 @@ export async function uploadDocument(req, res) {
 
     // ========= 2) parse body =========
     const folder_id = toInt(req.body?.folder_id);
-    const document_type_id = toInt(req.body?.document_type_id);
-    const it_job_type_id = toInt(req.body?.it_job_type_id);
+
+    // รองรับกรณี body ส่ง id มาเอง (optional)
+    const body_document_type_id =
+      toInt(req.body?.document_type_id) ?? toInt(req.body?.doc_type_id);
+    const body_it_job_type_id =
+      toInt(req.body?.it_job_type_id) ?? toInt(req.body?.it_work_id);
 
     // ✅ มาตรฐานใหม่: req.user.id
     const created_by = req.user?.id ?? null;
@@ -90,11 +114,39 @@ export async function uploadDocument(req, res) {
       });
     }
 
+    if (!created_by) {
+      safeUnlink(req.file?.path);
+      return res.status(401).json({ ok: false, message: "unauthorized" });
+    }
+
+    // ========= 4) get folder meta (source of truth) =========
+    // ✅ ดึง document_type_id / it_job_type_id จากแฟ้ม
+    const folderRes = await pool.query(
+      `SELECT folder_id, document_type_id, it_job_type_id
+       FROM folders
+       WHERE folder_id = $1 AND deleted_at IS NULL
+       LIMIT 1`,
+      [folder_id]
+    );
+
+    if (folderRes.rowCount === 0) {
+      safeUnlink(req.file?.path);
+      return res.status(404).json({ ok: false, message: "folder not found" });
+    }
+
+    const folder = folderRes.rows[0];
+
+    // ถ้า body ส่งมาก็ใช้ได้ (แต่โดย UI คุณล็อกไม่ให้แก้แล้ว)
+    const document_type_id =
+      body_document_type_id ?? toInt(folder?.document_type_id);
+    const it_job_type_id = body_it_job_type_id ?? toInt(folder?.it_job_type_id);
+
     if (!document_type_id) {
       safeUnlink(req.file?.path);
       return res.status(400).json({
         ok: false,
-        message: "document_type_id is required and must be integer",
+        message:
+          "document_type_id is missing. Please set document type on the folder first.",
       });
     }
 
@@ -102,53 +154,39 @@ export async function uploadDocument(req, res) {
       safeUnlink(req.file?.path);
       return res.status(400).json({
         ok: false,
-        message: "it_job_type_id is required and must be integer",
+        message:
+          "it_job_type_id is missing. Please set IT job type on the folder first.",
       });
     }
 
-    if (!created_by) {
-      safeUnlink(req.file?.path);
-      return res.status(401).json({ ok: false, message: "unauthorized" });
-    }
-
-    // ========= 4) validate FK exists =========
-    // folder exists
-    const checkFolder = await pool.query(
-      "SELECT folder_id FROM folders WHERE folder_id = $1 AND deleted_at IS NULL LIMIT 1",
-      [folder_id]
-    );
-    if (checkFolder.rowCount === 0) {
-      safeUnlink(req.file?.path);
-      return res.status(404).json({ ok: false, message: "folder not found" });
-    }
-
-    // document type exists
+    // ========= 5) validate FK exists =========
     const checkDocType = await pool.query(
       "SELECT document_type_id FROM document_types WHERE document_type_id = $1 AND deleted_at IS NULL LIMIT 1",
       [document_type_id]
     );
     if (checkDocType.rowCount === 0) {
       safeUnlink(req.file?.path);
-      return res
-        .status(404)
-        .json({ ok: false, message: "document type not found" });
+      return res.status(404).json({ ok: false, message: "document type not found" });
     }
 
-    // it job type exists
     const checkJobType = await pool.query(
       "SELECT it_job_type_id FROM it_job_types WHERE it_job_type_id = $1 AND deleted_at IS NULL LIMIT 1",
       [it_job_type_id]
     );
     if (checkJobType.rowCount === 0) {
       safeUnlink(req.file?.path);
-      return res
-        .status(404)
-        .json({ ok: false, message: "it job type not found" });
+      return res.status(404).json({ ok: false, message: "it job type not found" });
     }
 
-    // ========= 5) create document =========
+    // ========= 6) create document =========
+    const fixedOriginal = fixOriginalName(req.file.originalname);
+
+    // ✅ title เอาจาก frontend ได้ / ถ้าไม่ส่งมา ใช้ชื่อไฟล์ที่แก้ encoding แล้ว
+    const title = String(req.body?.title ?? "").trim() || fixedOriginal;
+
     const doc = await createDocument({
-      original_file_name: req.file.originalname,
+      title,
+      original_file_name: fixedOriginal, // ✅ สำคัญ: บันทึกชื่อไทยที่ถูกต้องลง DB
       stored_file_name: req.file.filename,
       file_path: req.file.path,
       file_size: req.file.size,

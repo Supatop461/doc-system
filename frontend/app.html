@@ -10,18 +10,20 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- ✅ THEME เดียวกับ Dashboard (สำคัญที่สุด) -->
+  <!-- ✅ THEME เดียวกับ Dashboard -->
   <link rel="stylesheet" href="./assets/css/dashboard.css" />
 
-  <!-- ✅ CSS เฉพาะหน้าแฟ้ม -->
+  <!-- ✅ CSS เฉพาะหน้าแฟ้ม/เอกสาร -->
   <link rel="stylesheet" href="./assets/css/folders.css" />
+  <link rel="stylesheet" href="./assets/css/pages/folders.page.css">
+  <link rel="stylesheet" href="./assets/css/pages/documents.page.css">
 
   <!-- ✅ CSS Modals -->
   <link rel="stylesheet" href="./assets/css/folders.modal.css" />
   <link rel="stylesheet" href="./assets/css/folder-create.modal.css" />
   <link rel="stylesheet" href="./assets/css/documents-upload.modal.css" />
 
-  <!-- ✅ small helpers ที่หน้า app ใช้ แต่ dashboard.css ไม่มี -->
+  <!-- ✅ small helpers -->
   <style>
     .muted { color: rgba(75,0,48,.55); }
     .page-head{
@@ -33,10 +35,7 @@
     }
     .page-head h1{ margin:0; font-size:26px; }
     .page-head p{ margin:6px 0 0; color: rgba(75,0,48,.55); }
-    .btn-primary{
-      background:#e83e8c;
-      color:#fff;
-    }
+    .btn-primary{ background:#e83e8c; color:#fff; }
     .panel-scroll{ overflow:auto; }
     table{ width:100%; border-collapse:collapse; }
     th,td{ padding:12px 10px; border-bottom:1px solid rgba(120,0,70,.08); text-align:left; }
@@ -103,41 +102,42 @@
 
       <article class="panel" id="panelRight">
         <div class="panel-head">
-          <h2 id="rightTitle">รายละเอียด</h2>
-          <span class="muted" id="rightHint">เลือกแถวเพื่อดูรายละเอียด</span>
+          <h2 id="rightTitle"></h2>
+          <span class="muted" id="rightHint"></span>
         </div>
-        <div class="panel-body" id="rightBody">
-          <div class="muted">รายละเอียดจะขึ้นที่นี่</div>
-        </div>
+        <div class="panel-body" id="rightBody"></div>
       </article>
     </section>
 
-    <section class="panel panel-bottom">
-      <div class="panel-head">
-        <h2>ตารางตัวอย่าง</h2>
-        <span class="muted">โครงสำหรับต่อ API</span>
+    <!-- ✅ Folder Documents Modal (เอกสารในแฟ้ม) -->
+    <div id="folderDocsModal" class="modal hidden" aria-hidden="true">
+      <div class="modal-card large">
+        <div class="modal-header">
+          <h3 id="folderDocsTitle">เอกสารในแฟ้ม</h3>
+          <button class="modal-close" type="button" onclick="closeFolderDocs()">✕</button>
+        </div>
+
+        <div class="modal-body">
+          <table class="doc-table">
+            <thead>
+              <tr>
+                <th>ชื่อเอกสาร</th>
+                <th>ประเภท</th>
+                <th style="width:180px">การทำงาน</th>
+              </tr>
+            </thead>
+            <tbody id="folderDocsBody"></tbody>
+          </table>
+        </div>
       </div>
-      <div class="panel-body panel-scroll">
-        <table>
-          <thead>
-            <tr>
-              <th>รหัส</th>
-              <th>ชื่อ</th>
-              <th>ประเภท</th>
-              <th>อัปเดต</th>
-            </tr>
-          </thead>
-          <tbody id="tableBody"></tbody>
-        </table>
-      </div>
-    </section>
+    </div>
 
     <footer class="footer">
       <span id="lastUpdated">อัปเดตล่าสุด: -</span>
     </footer>
   </main>
 
-  <!-- ===== Auth Guard (กันเข้าหน้าโดยไม่ login) ===== -->
+  <!-- ===== Auth Guard ===== -->
   <script>
     const token = localStorage.getItem("token");
     if (!token) window.location.href = "./index.html";
@@ -146,13 +146,16 @@
   <!-- ✅ โหลด api ก่อน -->
   <script src="./assets/js/api.js"></script>
 
-  <!-- ✅ โหลด page modules ก่อน app.js (สำคัญมาก) -->
+  <!-- ✅ โหลด page modules ก่อน app.js -->
   <script src="./assets/js/pages/folders.page.js"></script>
   <script src="./assets/js/pages/documents.page.js"></script>
   <script src="./assets/js/pages/trash.page.js"></script>
   <script src="./assets/js/pages/settings.page.js"></script>
 
-  <!-- ✅ ค่อยโหลด app.js ที่เรียก window.pages.* -->
+  <!-- ✅ สำคัญ: โหลด upload modal -->
+  <script src="./assets/js/modals/documents-upload.modal.js"></script>
+
+  <!-- ✅ ค่อยโหลด app.js -->
   <script src="./assets/js/app.js"></script>
 </body>
 </html>

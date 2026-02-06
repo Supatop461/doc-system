@@ -128,19 +128,15 @@
   };
 
   const setLoadingIntoLeft = (title) => {
-    if (leftTitle()) leftTitle().textContent = title ?? "";
-    if (leftBadge()) leftBadge().textContent = "กำลังโหลด...";
+    if (leftTitle()) leftTitle().textContent = title ?? "กำลังโหลด…";
+    if (leftBadge()) leftBadge().textContent = "กำลังโหลด…";
     if (leftBody()) {
       leftBody().innerHTML = `
         <div style="padding:14px;">
-          <div style="font-weight:900;">${esc(title || "กำลังโหลด...")}</div>
-          <div class="muted" style="margin-top:6px;">กรุณารอสักครู่...</div>
+          <div class="muted">กำลังโหลดข้อมูล…</div>
         </div>
       `;
     }
-    if (rightTitle()) rightTitle().textContent = "รายละเอียด";
-    if (rightHint()) rightHint().textContent = "คลิกแถวเพื่อดูรายละเอียด";
-    if (rightBody()) rightBody().innerHTML = `<div class="muted">คลิกแถวเพื่อดูรายละเอียด</div>`;
   };
 
   const setErrorIntoLeft = (title, err) => {
@@ -163,7 +159,7 @@
   };
 
   // =========================
-  // ⭐ Cleanup: ของใครของมัน (แก้ตามที่คุณบอก)
+  // ⭐ Cleanup: ของใครของมัน
   // =========================
   const cleanupBeforeRoute = () => {
     // 1) ซ่อน “ตารางตัวอย่าง/โครงสำหรับต่อ API” ไม่ให้ตามทุกหน้า
@@ -174,12 +170,21 @@
     const tb = $("tableBody");
     if (tb) tb.innerHTML = "";
 
-    // 3) ปิด upload modal ถ้าค้าง
+    // 3) ปิด upload modal ถ้าค้าง (ของเรา)
     const uploadOverlay = $("uploadModalOverlay");
     if (uploadOverlay) uploadOverlay.style.display = "none";
 
-    // 4) reset detail
-    if (rightBody()) rightBody().innerHTML = `<div class="muted">คลิกแถวเพื่อดูรายละเอียด</div>`;
+    // 4) reset detail (✅ เอาข้อความ “คลิกแถวเพื่อดูรายละเอียด” ออก)
+    if (rightTitle()) rightTitle().innerHTML = "";
+    if (rightHint()) rightHint().innerHTML = "";
+    if (rightBody()) rightBody().innerHTML = "";
+
+    // ✅ สำคัญ: ล้าง event เดิมของปุ่ม btnNew เพื่อไม่ให้คลิกซ้ำ/ค้างจากหน้าก่อน
+    const btn = $("btnNew");
+    if (btn && btn.parentNode) {
+      const clone = btn.cloneNode(true);
+      btn.parentNode.replaceChild(clone, btn);
+    }
   };
 
   // คุมปุ่ม + เพิ่มใหม่ ให้ขึ้นเฉพาะหน้าที่ใช้
@@ -204,8 +209,20 @@
 
   // ✅ ระบุชัด: หน้าไหนมีปุ่มเพิ่มใหม่
   const ROUTES = {
-    folders: { title: "แฟ้มเอกสาร", desc: "จัดการแฟ้มเอกสารและเอกสารภายในระบบ", moduleKey: "folders", newBtn: true, newLabel: "+ เพิ่มใหม่" },
-    all: { title: "เอกสารทั้งหมด", desc: "รายการเอกสารทั้งหมดในระบบ", moduleKey: "documents", newBtn: true, newLabel: "+ เพิ่มใหม่" },
+    folders: {
+      title: "แฟ้มเอกสาร",
+      desc: "จัดการแฟ้มเอกสารและเอกสารภายในระบบ",
+      moduleKey: "folders",
+      newBtn: true,
+      newLabel: "＋ เพิ่มแฟ้ม",
+    },
+    all: {
+      title: "เอกสารทั้งหมด",
+      desc: "รายการเอกสารทั้งหมดในระบบ",
+      moduleKey: "documents",
+      newBtn: true,
+      newLabel: "＋ เพิ่มเอกสาร",
+    },
     search: { title: "ค้นหา", desc: "ค้นหาเอกสารในระบบ", moduleKey: "search", newBtn: false },
     trash: { title: "ถังขยะ", desc: "รายการเอกสารที่ถูกลบ (กู้คืนได้)", moduleKey: "trash", newBtn: false },
     settings: { title: "ตั้งค่า", desc: "ตั้งค่าระบบเบื้องต้น", moduleKey: "settings", newBtn: false },
@@ -235,6 +252,24 @@
       document.head.appendChild(s);
     });
 
+  // ✅ inject css once
+  const ensureCssOnce = (href) => {
+    const exist = Array.from(document.querySelectorAll("link[rel='stylesheet']")).some((l) =>
+      (l.getAttribute("href") || "").includes(href)
+    );
+    if (exist) return;
+    const link = document.createElement("link");
+    link.rel = "stylesheet";
+    link.href = href + (href.includes("?") ? "" : `?v=${Date.now()}`);
+    document.head.appendChild(link);
+  };
+
+  // ✅ ให้ modal upload ทำงานทุกหน้า (โหลดครั้งเดียว)
+  const ensureUploadModalReady = async () => {
+    ensureCssOnce("assets/css/documents-upload.modal.css");
+    await loadScriptOnce("assets/js/modals/documents-upload.modal.js");
+  };
+
   const applyRoute = (h) => {
     if (!h) return;
     const x = h.startsWith("#") ? h : `#${h}`;
@@ -253,9 +288,27 @@
     });
   };
 
+  // ✅ logout bind (ของจริงใช้ window.api.logoutAndRedirect จาก api.js)
+  const bindLogoutOnce = () => {
+    const btn = $("btnLogout");
+    if (!btn) return;
+    if (btn.dataset.boundLogout === "1") return;
+    btn.dataset.boundLogout = "1";
+
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (window.api?.logoutAndRedirect) return window.api.logoutAndRedirect();
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      location.href = "./index.html";
+    });
+  };
+
   const renderRoute = async () => {
     try {
       assertLayout();
+      bindLogoutOnce(); // ✅ ให้แน่ใจว่ามีทุกหน้า
+      await ensureUploadModalReady(); // ✅ ให้ปุ่ม “เพิ่มเอกสาร” เด้ง modal ได้แน่นอน
       cleanupBeforeRoute();
 
       const key = normalizeHash(location.hash).replace(/^#/, "") || "folders";
@@ -297,6 +350,9 @@
       setErrorIntoLeft("โหลดหน้าไม่สำเร็จ", e);
     }
   };
+
+  // ✅ ให้ modal เรียกเพื่อ “รีเฟรชหน้า” ได้หลังอัปโหลดเสร็จ
+  window.addEventListener("force-render-route", renderRoute);
 
   // =========================
   // Boot

@@ -5,7 +5,7 @@ import { authRequired, requireAdmin } from "../middlewares/auth.js";
 
 const router = express.Router();
 
-// helper: ตรวจ document_id แบบเบา ๆ (รองรับทั้งเลขและ uuid)
+// helper: ตรวจ id (รองรับเลข + uuid-ish)
 function isValidId(id) {
   if (!id) return false;
   if (/^\d+$/.test(id)) return true; // integer
@@ -15,52 +15,89 @@ function isValidId(id) {
 
 /**
  * GET /api/trash
- * list documents in trash
- * ✅ admin only (ถ้าจะให้ user เห็นด้วย เอา requireAdmin ออก)
+ * GET /api/trash?type=documents
+ * GET /api/trash?type=folders
+ * GET /api/trash?type=all   (default)
+ *
+ * ✅ คืนเป็น object: { type, documents:[], folders:[] }
  */
-router.get("/", authRequired, requireAdmin, async (_req, res) => {
+router.get("/", authRequired, requireAdmin, async (req, res) => {
   try {
-    const { rows } = await pool.query(
-      `
-      SELECT
-        -- ✅ alias ให้ frontend ใช้ง่าย
-        document_id AS id,
-        original_file_name AS name,
-        mime_type AS type,
-        deleted_at AS updated_at,
+    const type = String(req.query.type || "all");
 
-        -- ✅ fields เดิม (คงไว้ครบ)
-        document_id,
-        original_file_name,
-        stored_file_name,
-        file_path,
-        file_size,
-        mime_type,
-        folder_id,
-        created_by,
-        created_at,
-        updated_at AS updated_at_orig,
-        deleted_at,
-        deleted_by,
-        document_type_id,
-        it_job_type_id,
-        created_by_user_id
-      FROM documents
-      WHERE deleted_at IS NOT NULL
-      ORDER BY deleted_at DESC
-      `
-    );
+    let documents = [];
+    let folders = [];
 
-    // ✅ คงรูปแบบเดิมของคุณ: { items: [...] }
-    res.json({ items: rows });
+    // ===== documents =====
+    if (type === "documents" || type === "all") {
+      const { rows } = await pool.query(`
+        SELECT
+          'document' AS trash_type,
+
+          document_id AS id,
+          original_file_name AS name,
+          mime_type,
+          deleted_at,
+
+          -- fields เดิม (คงไว้)
+          document_id,
+          original_file_name,
+          stored_file_name,
+          file_path,
+          file_size,
+          mime_type,
+          folder_id,
+          created_by,
+          created_at,
+          updated_at AS updated_at_orig,
+          deleted_at,
+          deleted_by,
+          document_type_id,
+          it_job_type_id,
+          created_by_user_id
+        FROM documents
+        WHERE deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+      `);
+      documents = rows;
+    }
+
+    // ===== folders =====
+    if (type === "folders" || type === "all") {
+      const { rows } = await pool.query(`
+        SELECT
+          'folder' AS trash_type,
+
+          folder_id AS id,
+          name,
+          parent_id,
+          deleted_at,
+
+          -- fields เดิม (คงไว้)
+          folder_id,
+          name,
+          parent_id,
+          created_by,
+          created_at,
+          deleted_at
+        FROM folders
+        WHERE deleted_at IS NOT NULL
+        ORDER BY deleted_at DESC
+      `);
+      folders = rows;
+    }
+
+    return res.json({ type, documents, folders });
   } catch (err) {
     console.error("TRASH LIST error:", err);
-    res.status(500).json({ message: "TRASH_LIST_FAILED" });
+    return res.status(500).json({ message: "TRASH_LIST_FAILED" });
   }
 });
 
-// ===== restore handler (ใช้ร่วมกัน) =====
-async function restoreHandler(req, res) {
+// =======================
+// RESTORE DOCUMENT (เดิม)
+// =======================
+async function restoreDocument(req, res) {
   try {
     const { document_id } = req.params;
 
@@ -83,38 +120,78 @@ async function restoreHandler(req, res) {
     if (!rowCount) return res.status(404).json({ message: "NOT_FOUND_IN_TRASH" });
     return res.json({ ok: true });
   } catch (err) {
-    console.error("TRASH RESTORE error:", err);
+    console.error("TRASH RESTORE DOCUMENT error:", err);
     return res.status(500).json({ message: "TRASH_RESTORE_FAILED" });
   }
 }
 
+// =======================
+// RESTORE FOLDER (CASCADE)
+// =======================
+router.post("/folders/:folder_id/restore", authRequired, requireAdmin, async (req, res) => {
+  try {
+    const { folder_id } = req.params;
+    if (!isValidId(folder_id)) {
+      return res.status(400).json({ message: "INVALID_FOLDER_ID" });
+    }
+
+    const rootId = Number(folder_id);
+
+    // ✅ หา descendants ทั้งหมดด้วย recursive CTE (รวมตัวมันเอง)
+    const findSql = `
+      WITH RECURSIVE tree AS (
+        SELECT folder_id
+        FROM folders
+        WHERE folder_id = $1
+
+        UNION ALL
+
+        SELECT f.folder_id
+        FROM folders f
+        JOIN tree t ON f.parent_id = t.folder_id
+      )
+      SELECT folder_id FROM tree
+    `;
+    const found = await pool.query(findSql, [rootId]);
+    const ids = found.rows.map((r) => r.folder_id);
+
+    if (ids.length === 0) {
+      return res.status(404).json({ message: "FOLDER_NOT_FOUND" });
+    }
+
+    // ✅ restore ทั้งกิ่ง (เฉพาะที่อยู่ในถังขยะ)
+    const restoreSql = `
+      UPDATE folders
+      SET deleted_at = NULL,
+          updated_at = NOW()
+      WHERE folder_id = ANY($1::int[])
+        AND deleted_at IS NOT NULL
+    `;
+    await pool.query(restoreSql, [ids]);
+
+    return res.json({ ok: true, restored_folder_ids: ids });
+  } catch (err) {
+    console.error("TRASH RESTORE FOLDER error:", err);
+    return res.status(500).json({ message: "FOLDER_RESTORE_FAILED" });
+  }
+});
+
 /**
  * ✅ POST /api/trash/:document_id/restore
- */
-router.post("/:document_id/restore", authRequired, requireAdmin, restoreHandler);
-
-/**
  * ✅ PATCH /api/trash/:document_id/restore
  */
-router.patch("/:document_id/restore", authRequired, requireAdmin, restoreHandler);
+router.post("/:document_id/restore", authRequired, requireAdmin, restoreDocument);
+router.patch("/:document_id/restore", authRequired, requireAdmin, restoreDocument);
 
 /**
- * ❌ ตัดลบถาวรออกทั้งหมด
- * - เดิมมี:
- *   DELETE /api/trash/:document_id
- *   DELETE /api/trash  (ล้างถัง)
- * - ตอนนี้ "ไม่รองรับ" แล้ว เพื่อความปลอดภัย
+ * ❌ ปิดลบถาวร (เหมือนเดิม เพื่อความปลอดภัย)
  */
-router.delete("/:document_id", authRequired, requireAdmin, (_req, res) => {
-  return res.status(405).json({
-    message: "PERMANENT_DELETE_DISABLED",
-  });
+router.delete("/:id", authRequired, requireAdmin, (_req, res) => {
+  return res.status(405).json({ message: "PERMANENT_DELETE_DISABLED" });
 });
 
 router.delete("/", authRequired, requireAdmin, (_req, res) => {
-  return res.status(405).json({
-    message: "EMPTY_TRASH_DISABLED",
-  });
+  return res.status(405).json({ message: "EMPTY_TRASH_DISABLED" });
 });
 
 export default router;

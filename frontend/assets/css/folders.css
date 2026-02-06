@@ -87,3 +87,107 @@
   border-radius: 16px;
   border: 1px dashed rgba(236, 72, 153, 0.25);
 }
+
+/* ===== Pretty Alerts (Callout) ===== */
+.alert {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,0.06);
+  background: rgba(255,255,255,0.75);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.06);
+}
+
+.alert__icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex: 0 0 auto;
+}
+
+.alert__body { flex: 1; }
+.alert__title {
+  font-weight: 700;
+  margin: 0 0 2px 0;
+  font-size: 14px;
+}
+.alert__desc {
+  margin: 0;
+  opacity: 0.9;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+/* Variants */
+.alert--danger {
+  background: rgba(255, 237, 237, 0.85);
+  border-color: rgba(239, 68, 68, 0.25);
+}
+.alert--danger .alert__icon {
+  background: rgba(239, 68, 68, 0.12);
+  color: rgba(185, 28, 28, 1);
+}
+
+.alert--info {
+  background: rgba(239, 246, 255, 0.85);
+  border-color: rgba(59, 130, 246, 0.25);
+}
+.alert--info .alert__icon {
+  background: rgba(59, 130, 246, 0.12);
+  color: rgba(29, 78, 216, 1);
+}
+
+/* Optional: small code pill */
+.alert__code {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  background: rgba(0,0,0,0.05);
+}
+
+/* =========================
+   Tree UI enhancements (keep layout same, just clearer)
+   ========================= */
+.tree-node{
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+}
+.tree-node:hover{
+  transform: translateY(-1px);
+  border-color: rgba(236,72,153,.28) !important;
+  box-shadow: 0 14px 30px rgba(236,72,153,.12);
+}
+.tree-node .btn{
+  border-radius: 12px;
+}
+
+/* Pills used in detail modal */
+.folder-pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(236,72,153,.08);
+  border: 1px solid rgba(236,72,153,.18);
+  color:#831843;
+  font-size:12px;
+}
+.folder-pill b{ font-weight:900; }
+
+.folder-descbox{
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.06);
+  background: rgba(255,255,255,.8);
+  box-shadow: 0 10px 24px rgba(0,0,0,.05);
+  color:#4b0030;
+  font-size:13px;
+  line-height:1.6;
+}
