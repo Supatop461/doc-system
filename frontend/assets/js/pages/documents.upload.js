@@ -104,16 +104,9 @@
 
     document.body.appendChild(overlay);
 
-    document
-      .getElementById("btnUploadClose")
-      .addEventListener("click", closeUploadModal);
-    document
-      .getElementById("btnUploadCancel")
-      .addEventListener("click", closeUploadModal);
-
-    document
-      .getElementById("btnUploadSubmit")
-      .addEventListener("click", submitUpload);
+    document.getElementById("btnUploadClose").addEventListener("click", closeUploadModal);
+    document.getElementById("btnUploadCancel").addEventListener("click", closeUploadModal);
+    document.getElementById("btnUploadSubmit").addEventListener("click", submitUpload);
   }
 
   function openUploadModal() {
@@ -132,19 +125,17 @@
   // Load select data
   // =========================
   async function loadAllSelects() {
-    await Promise.all([
-      loadFolders(),
-      loadDocTypes(),
-      loadItJobs(),
-      loadOwner(),
-    ]);
+    await Promise.all([loadFolders(), loadDocTypes(), loadItJobs(), loadOwner()]);
   }
 
   async function loadFolders() {
     const sel = document.getElementById("upFolder");
     sel.innerHTML = `<option>กำลังโหลด...</option>`;
-    const data = await apiFetch("/api/folders");
+
+    // ✅ เอาทั้งหมด เพื่อให้เลือกแฟ้มย่อยได้ด้วย
+    const data = await apiFetch("/api/folders?all=1");
     const items = normalizeItems(data);
+
     sel.innerHTML =
       `<option value="">-- เลือกแฟ้ม --</option>` +
       items
@@ -160,7 +151,7 @@
   async function loadDocTypes() {
     const sel = document.getElementById("upDocType");
     sel.innerHTML = `<option>กำลังโหลด...</option>`;
-    const data = await apiFetch("/api/document-types");
+    const data = await apiFetch("/api/settings/document-types")
     const items = normalizeItems(data);
     sel.innerHTML =
       `<option value="">-- เลือกประเภทเอกสาร --</option>` +
@@ -177,7 +168,7 @@
   async function loadItJobs() {
     const sel = document.getElementById("upItJob");
     sel.innerHTML = `<option>กำลังโหลด...</option>`;
-    const data = await apiFetch("/api/it-job-types");
+    const data = await apiFetch("/api/settings/it-job-types")
     const items = normalizeItems(data);
     sel.innerHTML =
       `<option value="">-- เลือกงาน IT --</option>` +

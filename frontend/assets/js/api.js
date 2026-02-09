@@ -1,276 +1,179 @@
 // frontend/assets/js/api.js
-(() => {
-  // =========================
-  // CONFIG
-  // =========================
-  const TOKEN_KEY = "token";
-  const USER_KEY = "user";
-
-  const DEFAULT_API_ORIGIN = "http://localhost:3000";
-  const API_ORIGIN =
-    window.API_ORIGIN ||
-    (location?.origin && location.origin !== "null" ? location.origin : DEFAULT_API_ORIGIN);
-
-  const LOGIN_PAGE = "./index.html";
+(function () {
+  const api = (window.api = window.api || {});
 
   // =========================
-  // AUTH
+  // Token helpers
   // =========================
-  function getToken() {
-    return localStorage.getItem(TOKEN_KEY) || "";
+  api.getToken = function getToken() {
+    return localStorage.getItem("token") || "";
+  };
+
+  api.setToken = function setToken(token) {
+    if (!token) {
+      localStorage.removeItem("token");
+      return;
+    }
+    const t = String(token).trim().replace(/^Bearer\s+/i, "");
+    localStorage.setItem("token", t);
+  };
+
+  api.logoutAndRedirect = function logoutAndRedirect() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    if (!location.pathname.endsWith("/index.html")) {
+      location.href = "./index.html";
+    }
+  };
+
+  // =========================
+  // Internal helpers
+  // =========================
+  function withAuthHeader(headers) {
+    const h = new Headers(headers || {});
+    const token = api.getToken();
+    if (token) h.set("Authorization", `Bearer ${token}`);
+    return h;
   }
 
-  function getUser() {
+  function isFormData(x) {
+    return typeof FormData !== "undefined" && x instanceof FormData;
+  }
+
+  function isAbsoluteUrl(url) {
+    return /^https?:\/\//i.test(String(url || ""));
+  }
+
+  function normalizeUrl(url) {
+    const u = String(url || "").trim();
+    if (!u) return u;
+    if (isAbsoluteUrl(u)) return u;
+    if (u.startsWith("/")) return u;
+    return u;
+  }
+
+  async function readTextSafe(res) {
     try {
-      return JSON.parse(localStorage.getItem(USER_KEY) || "{}");
+      return await res.text();
     } catch {
-      return {};
+      return "";
     }
   }
 
-  function setToken(token) {
-    localStorage.setItem(TOKEN_KEY, token);
-  }
-
-  function setUser(user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user || {}));
-  }
-
-  function clearAuth() {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-  }
-
-  function logoutAndRedirect() {
-    clearAuth();
-    window.location.href = LOGIN_PAGE;
-  }
-
-  // =========================
-  // CORE FETCH (JSON/TEXT)
-  // =========================
-  async function apiFetch(path, options = {}) {
-    const token = getToken();
-
-    const headers = new Headers(options.headers || {});
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-
-    const url = /^https?:\/\//i.test(path) ? path : `${API_ORIGIN}${path}`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
+  function extractErrorMessage(res, text) {
     try {
-      const res = await fetch(url, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-
-      if (res.status === 401) {
-        logoutAndRedirect();
-        throw new Error("UNAUTHORIZED");
+      const j = text ? JSON.parse(text) : null;
+      if (j && typeof j === "object") {
+        if (j.message) return String(j.message);
+        if (j.error) return typeof j.error === "string" ? j.error : "เกิดข้อผิดพลาด";
       }
+    } catch {}
 
-      const text = await res.text();
-      let data = {};
+    const t = String(text || "").trim();
+    if (t) return t;
+
+    return `Request failed (${res.status})`;
+  }
+
+  // =========================
+  // JSON API fetch
+  // =========================
+  api.apiFetch = async function apiFetch(url, opts = {}) {
+    const finalUrl = normalizeUrl(url);
+    const method = String(opts.method || "GET").toUpperCase();
+
+    let body = opts.body;
+    const headers = withAuthHeader(opts.headers);
+
+    if (body && typeof body === "object" && !isFormData(body)) {
+      if (!headers.get("Content-Type")) headers.set("Content-Type", "application/json");
+      body = JSON.stringify(body);
+    }
+
+    const res = await fetch(finalUrl, { ...opts, method, headers, body });
+
+    if (res.status === 401) {
+      api.logoutAndRedirect();
+      throw new Error("ต้องเข้าสู่ระบบใหม่");
+    }
+
+    const text = await readTextSafe(res);
+
+    if (res.ok) {
+      if (!text) return {};
       try {
-        data = text ? JSON.parse(text) : {};
+        return JSON.parse(text);
       } catch {
-        data = { message: text };
+        return { ok: true, text };
       }
-
-      if (!res.ok) {
-        const msg =
-          data?.message ||
-          data?.error ||
-          (typeof data === "string" ? data : "") ||
-          `Request failed (${res.status})`;
-        throw new Error(msg);
-      }
-
-      return data;
-    } catch (err) {
-      if (err?.name === "AbortError") {
-        throw new Error("เชื่อมต่อเซิร์ฟเวอร์นานเกินไป (timeout)");
-      }
-      if (String(err?.message || "").includes("Failed to fetch")) {
-        throw new Error(`เชื่อมต่อ API ไม่ได้ (${API_ORIGIN}) — เช็คว่า backend รันที่พอร์ต 3000`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
     }
-  }
+
+    const msg = extractErrorMessage(res, text);
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
+  };
 
   // =========================
-  // BLOB FETCH (ดาวน์โหลด/พรีวิวแบบมี token)
+  // Multipart/form-data fetch
   // =========================
-  async function apiFetchBlob(path, options = {}) {
-    const token = getToken();
-    const headers = new Headers(options.headers || {});
-    if (token) headers.set("Authorization", `Bearer ${token}`);
-
-    const url = /^https?:\/\//i.test(path) ? path : `${API_ORIGIN}${path}`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000);
-
-    try {
-      const res = await fetch(url, { ...options, headers, signal: controller.signal });
-
-      if (res.status === 401) {
-        logoutAndRedirect();
-        throw new Error("UNAUTHORIZED");
-      }
-
-      if (!res.ok) {
-        // พยายามอ่าน json error
-        const text = await res.text().catch(() => "");
-        let data = {};
-        try {
-          data = text ? JSON.parse(text) : {};
-        } catch {
-          data = { message: text };
-        }
-        throw new Error(data?.message || `Request failed (${res.status})`);
-      }
-
-      return await res.blob();
-    } catch (err) {
-      if (err?.name === "AbortError") {
-        throw new Error("เชื่อมต่อเซิร์ฟเวอร์นานเกินไป (timeout)");
-      }
-      if (String(err?.message || "").includes("Failed to fetch")) {
-        throw new Error(`เชื่อมต่อ API ไม่ได้ (${API_ORIGIN}) — เช็คว่า backend รันที่พอร์ต 3000`);
-      }
-      throw err;
-    } finally {
-      clearTimeout(timeout);
+  api.formFetch = async function formFetch(url, { method = "POST", formData, headers } = {}) {
+    const finalUrl = normalizeUrl(url);
+    if (!formData || !isFormData(formData)) {
+      throw new Error("formFetch ต้องส่ง formData เป็น FormData");
     }
-  }
 
-  // =========================
-  // HELPERS
-  // =========================
-  async function jsonFetch(path, { method = "POST", body = {}, headers = {}, ...rest } = {}) {
-    return apiFetch(path, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...headers,
-      },
-      body: JSON.stringify(body),
-      ...rest,
-    });
-  }
+    const h = withAuthHeader(headers);
+    if (h.get("Content-Type")) h.delete("Content-Type");
 
-  async function formFetch(path, { method = "POST", formData, headers = {}, ...rest } = {}) {
-    return apiFetch(path, {
-      method,
-      headers: { ...headers },
+    const res = await fetch(finalUrl, {
+      method: String(method || "POST").toUpperCase(),
+      headers: h,
       body: formData,
-      ...rest,
     });
-  }
 
-  // =========================
-  // Documents API
-  // =========================
-  const documents = {
-    list: (opts = {}) => {
-      const { folder_id } = opts || {};
-      const qs = folder_id ? `?folder_id=${encodeURIComponent(folder_id)}` : "";
-      return apiFetch(`/api/documents${qs}`);
-    },
-    get: (id) => apiFetch(`/api/documents/${encodeURIComponent(id)}`),
-    delete: (id) => apiFetch(`/api/documents/${encodeURIComponent(id)}`, { method: "DELETE" }),
-    restore: (id) => apiFetch(`/api/documents/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+    if (res.status === 401) {
+      api.logoutAndRedirect();
+      throw new Error("ต้องเข้าสู่ระบบใหม่");
+    }
 
-    upload: ({ file, folder_id, title, description, doc_type, it_work, prefix } = {}) => {
-      const fd = new FormData();
-      if (file) fd.append("file", file);
-      if (folder_id != null) fd.append("folder_id", folder_id);
-      if (title != null) fd.append("title", title);
-      if (description != null) fd.append("description", description);
+    const text = await readTextSafe(res);
 
-      // ✅ fields เพิ่ม (ถ้า backend ยังไม่ใช้ ก็ไม่พัง)
-      if (doc_type != null) fd.append("doc_type", doc_type);
-      if (it_work != null) fd.append("it_work", it_work);
-      if (prefix != null) fd.append("prefix", prefix);
+    if (res.ok) {
+      if (!text) return {};
+      try {
+        return JSON.parse(text);
+      } catch {
+        return { ok: true, text };
+      }
+    }
 
-      return formFetch("/api/documents/upload", { method: "POST", formData: fd });
-    },
-
-    downloadBlob: (id) => apiFetchBlob(`/api/documents/${encodeURIComponent(id)}/download`, { method: "GET" }),
-    previewBlob: (id) => apiFetchBlob(`/api/documents/${encodeURIComponent(id)}/preview`, { method: "GET" }),
-
-    downloadUrl: (id) => `${API_ORIGIN}/api/documents/${encodeURIComponent(id)}/download`,
-    previewUrl: (id) => `${API_ORIGIN}/api/documents/${encodeURIComponent(id)}/preview`,
+    const msg = extractErrorMessage(res, text);
+    const err = new Error(msg);
+    err.status = res.status;
+    throw err;
   };
 
   // =========================
-  // Trash API
+  // ✅ Settings API (CRUD)
   // =========================
-  const trash = {
-    list: () => apiFetch("/api/trash"),
-    restore: (id) => apiFetch(`/api/trash/${encodeURIComponent(id)}/restore`, { method: "POST" }),
-    delete: (id) => apiFetch(`/api/trash/${encodeURIComponent(id)}`, { method: "DELETE" }),
-    empty: () => apiFetch("/api/trash", { method: "DELETE" }),
-  };
+  // เพิ่ม/เช็คเฉพาะส่วน settings ใน api.js
+api.settings = api.settings || {};
+const BASE = "/api/settings";
+const urlDocTypes = `${BASE}/document-types`;
+const urlItJobs = `${BASE}/it-job-types`;
 
-  // =========================
-  // Settings API
-  // =========================
-  const settings = {
-    documentTypes: {
-      list: (opts = {}) => {
-        const qs = opts.include_inactive ? "?include_inactive=1" : "";
-        return apiFetch(`/api/document-types${qs}`);
-      },
-      create: ({ name, is_active = true } = {}) =>
-        jsonFetch("/api/document-types", {
-          method: "POST",
-          body: { name, is_active },
-        }),
-    },
-    itJobTypes: {
-      list: (opts = {}) => {
-        const qs = opts.include_inactive ? "?include_inactive=1" : "";
-        return apiFetch(`/api/it-job-types${qs}`);
-      },
-      create: ({ name, is_active = true } = {}) =>
-        jsonFetch("/api/it-job-types", {
-          method: "POST",
-          body: { name, is_active },
-        }),
-    },
-  };
+api.settings.documentTypes = {
+  list: ({ include_inactive = true } = {}) => api.apiFetch(`${urlDocTypes}${include_inactive ? "?include_inactive=1" : ""}`),
+  create: (payload) => api.apiFetch(urlDocTypes, { method: "POST", body: payload }),
+  update: (id, payload) => api.apiFetch(`${urlDocTypes}/${encodeURIComponent(id)}`, { method: "PATCH", body: payload }),
+  remove: (id) => api.apiFetch(`${urlDocTypes}/${encodeURIComponent(id)}`, { method: "DELETE" }),
+};
 
-  // =========================
-  // expose
-  // =========================
-  window.apiFetch = apiFetch;
-  window.api = {
-    API_ORIGIN,
-
-    // auth
-    getToken,
-    getUser,
-    setToken,
-    setUser,
-    clearAuth,
-    logoutAndRedirect,
-
-    // fetchers
-    apiFetch,
-    apiFetchBlob,
-    jsonFetch,
-    formFetch,
-
-    // apis
-    documents,
-    trash,
-    settings,
-  };
+api.settings.itJobTypes = {
+  list: ({ include_inactive = true } = {}) => api.apiFetch(`${urlItJobs}${include_inactive ? "?include_inactive=1" : ""}`),
+  create: (payload) => api.apiFetch(urlItJobs, { method: "POST", body: payload }),
+  update: (id, payload) => api.apiFetch(`${urlItJobs}/${encodeURIComponent(id)}`, { method: "PATCH", body: payload }),
+  remove: (id) => api.apiFetch(`${urlItJobs}/${encodeURIComponent(id)}`, { method: "DELETE" }),
+};
 })();

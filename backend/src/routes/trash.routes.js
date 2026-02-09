@@ -3,6 +3,9 @@ import express from "express";
 import pool from "../db/pool.js";
 import { authRequired, requireAdmin } from "../middlewares/auth.js";
 
+import fs from "fs";
+import path from "path";
+
 const router = express.Router();
 
 // helper: ตรวจ id (รองรับเลข + uuid-ish)
@@ -11,6 +14,37 @@ function isValidId(id) {
   if (/^\d+$/.test(id)) return true; // integer
   if (/^[0-9a-fA-F-]{10,}$/.test(id)) return true; // uuid-ish
   return false;
+}
+
+// helper: หา path ไฟล์จริงให้ robust (ไม่พังของเดิม)
+function resolveExistingFilePath(row) {
+  const fp = row?.file_path ? String(row.file_path) : "";
+  const stored = row?.stored_file_name ? String(row.stored_file_name) : "";
+
+  const candidates = [];
+
+  // 1) ถ้า file_path เป็น full file path
+  if (fp) candidates.push(fp);
+
+  // 2) ถ้า file_path เป็น directory ให้ join กับ stored_file_name
+  if (fp && stored) candidates.push(path.join(fp, stored));
+
+  // 3) ถ้าเป็น relative ให้ resolve จาก cwd
+  if (fp) candidates.push(path.resolve(process.cwd(), fp));
+  if (fp && stored) candidates.push(path.resolve(process.cwd(), fp, stored));
+
+  // 4) fallback โฟลเดอร์ uploads (เผื่อโปรเจคเก็บไว้ตรงนี้)
+  if (stored) {
+    candidates.push(path.resolve(process.cwd(), "uploads", stored));
+    candidates.push(path.resolve(process.cwd(), "public", "uploads", stored));
+  }
+
+  for (const p of candidates) {
+    try {
+      if (p && fs.existsSync(p) && fs.statSync(p).isFile()) return p;
+    } catch (_) {}
+  }
+  return null;
 }
 
 /**
@@ -91,6 +125,63 @@ router.get("/", authRequired, requireAdmin, async (req, res) => {
   } catch (err) {
     console.error("TRASH LIST error:", err);
     return res.status(500).json({ message: "TRASH_LIST_FAILED" });
+  }
+});
+
+// =======================
+// ✅ PREVIEW FILE IN TRASH (NEW)
+// =======================
+// GET /api/trash/:document_id/file
+router.get("/:document_id/file", authRequired, requireAdmin, async (req, res) => {
+  try {
+    const { document_id } = req.params;
+
+    if (!isValidId(document_id)) {
+      return res.status(400).json({ message: "INVALID_DOCUMENT_ID" });
+    }
+
+    const { rows } = await pool.query(
+      `
+      SELECT
+        document_id,
+        original_file_name,
+        stored_file_name,
+        file_path,
+        file_size,
+        mime_type,
+        deleted_at
+      FROM documents
+      WHERE document_id = $1
+        AND deleted_at IS NOT NULL
+      LIMIT 1
+      `,
+      [document_id]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: "NOT_FOUND_IN_TRASH" });
+
+    const doc = rows[0];
+    const realPath = resolveExistingFilePath(doc);
+
+    if (!realPath) {
+      return res.status(404).json({ message: "FILE_NOT_FOUND_ON_DISK" });
+    }
+
+    const mime = doc.mime_type || "application/octet-stream";
+    const originalName = doc.original_file_name || `file-${document_id}`;
+
+    // ✅ ให้ pdf/รูปพรีวิวได้ (inline), ไฟล์อื่นยังดาวน์โหลดได้อยู่
+    const isInline = /^application\/pdf$/i.test(mime) || /^image\//i.test(mime);
+    res.setHeader("Content-Type", mime);
+    res.setHeader(
+      "Content-Disposition",
+      `${isInline ? "inline" : "attachment"}; filename="${encodeURIComponent(originalName)}"`
+    );
+
+    return res.sendFile(realPath);
+  } catch (err) {
+    console.error("TRASH FILE PREVIEW error:", err);
+    return res.status(500).json({ message: "TRASH_FILE_PREVIEW_FAILED" });
   }
 });
 

@@ -1,195 +1,280 @@
-/* frontend/assets/css/documents-upload.modal.css */
+/* frontend/assets/css/documents-upload.modal.css
+   ✅ Upload Documents Modal (multi-files) – modern, not too tall, scroll body
+*/
 
-.upload-modal-overlay{
-  position:fixed;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:16px;
-  background: rgba(0,0,0,.38);
-  z-index: 99999;
-}
-
-.upload-modal{
-  width:min(1000px, 96vw);
-  max-height:88vh;
-  display:flex;
-  flex-direction:column;
-  background:#fff;
-  border-radius:20px;
-  border:1px solid rgba(236,72,153,.25);
-  box-shadow:0 18px 70px rgba(0,0,0,.30);
-  overflow:hidden;
+/* ===== Overlay & Modal ===== */
+.up-overlay{
+  position: fixed;
+  inset: 0;
+  display: none; /* JS เปิดเป็น flex */
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(0,0,0,.45);
+  z-index: 10020;
 }
 
-.upload-modal__head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px 14px;
-  border-bottom:1px solid rgba(0,0,0,.06);
+.up-modal{
+  width: min(980px, 96vw);
+  max-height: 88vh;
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid rgba(236,72,153,.22);
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.upload-modal__title{
-  font-weight:950;
-  color:#831843;
-  font-size:15px;
+/* ===== Header ===== */
+.up-head{
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(252,231,243,.95), #fff);
+  border-bottom: 1px solid rgba(0,0,0,.08);
 }
 
-.upload-modal__body{
-  padding:14px;
-  overflow:auto;
+.up-title{
+  font-weight: 950;
+  color: #831843;
+  font-size: 18px;
+  line-height: 1.2;
 }
 
-.upload-modal__row{
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-start;
-  gap:12px;
-  flex-wrap:wrap;
+.up-sub{
+  margin-top: 2px;
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0,0,0,.6);
 }
 
-.upload-modal__hint{
-  color: rgba(75,0,48,.65);
-  font-size:12px;
-  font-weight:700;
+.iconx{
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: transform .08s ease, box-shadow .18s ease;
 }
 
-.upload-modal__actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
+.iconx:hover{
+  box-shadow: 0 12px 26px rgba(0,0,0,.12);
 }
 
-/* progress */
-.upload-modal__progress{
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:14px;
-  border:1px solid rgba(236,72,153,.18);
-  background: rgba(236,72,153,.06);
-}
-.upload-progress__bar{
-  height:10px;
-  border-radius:999px;
-  background: rgba(0,0,0,.08);
-  overflow:hidden;
-}
-.upload-progress__fill{
-  height:100%;
-  width:0%;
-  background: rgba(236,72,153,.85);
-}
-.upload-progress__text{
-  margin-top:8px;
-  font-weight:900;
-  color:#831843;
-  font-size:12px;
+.iconx:active{
+  transform: scale(.99);
 }
 
-.upload-modal__listWrap{
-  margin-top:12px;
-  border:1px solid rgba(236,72,153,.18);
-  border-radius:16px;
-  overflow:hidden;
+/* ===== Body ===== */
+.up-body{
+  padding: 16px 18px;
+  overflow: auto; /* ✅ scroll ใน modal */
+  flex: 1 1 auto;
 }
 
-.upload-modal__listHead{
-  display:grid;
-  grid-template-columns: 1.1fr 1fr 0.7fr 92px;
-  gap:10px;
-  padding:10px 12px;
-  background: rgba(236,72,153,.06);
-  font-weight:900;
-  color:#831843;
-  border-bottom:1px solid rgba(0,0,0,.06);
-  font-size:12px;
+.up-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.upload-modal__list{
-  display:flex;
-  flex-direction:column;
-  gap:0;
+.up-field{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
-.upload-item{
-  display:grid;
-  grid-template-columns: 1.1fr 1fr 0.7fr 92px;
-  gap:10px;
-  padding:10px 12px;
-  border-bottom:1px solid rgba(120,0,70,.08);
-  align-items:start;
+.up-label{
+  font-weight: 950;
+  color: #831843;
+  font-size: 13px;
 }
 
-.upload-item__name{
-  font-weight:900;
-  color:#4b0030;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.up-label.req::after{
+  content: " *";
+  color: #dc2626;
+  font-weight: 950;
 }
 
-.upload-item__sub{
-  font-size:12px;
-  margin-top:2px;
+.up-help{
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(0,0,0,.55);
 }
 
-.upload-title-input{
-  width:100%;
-  padding:10px 10px;
-  border-radius:12px;
-  border:1px solid rgba(0,0,0,.15);
-  outline:none;
+.muted{
+  color: rgba(0,0,0,.55);
+  font-weight: 800;
 }
 
-.upload-title-input:focus{
-  border-color: rgba(236,72,153,.55);
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+}
+
+/* Inputs (อิง class ที่ JS ใช้) */
+.modal-input,
+.modal-select{
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.15);
+  outline: none;
+  background: #fff;
+}
+
+.modal-input:focus,
+.modal-select:focus{
+  border-color: rgba(236,72,153,.6);
   box-shadow: 0 0 0 4px rgba(236,72,153,.12);
 }
 
-.upload-status{
-  display:inline-flex;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(0,0,0,.12);
-  font-weight:900;
-  font-size:12px;
-  color:#4b0030;
-  background:#fff;
-}
-.upload-status.run{ border-color: rgba(236,72,153,.35); background: rgba(236,72,153,.06); }
-.upload-status.ok{ border-color: rgba(34,197,94,.35); background: rgba(34,197,94,.10); }
-.upload-status.bad{ border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.10); color:#991b1b; }
-
-.upload-err{
-  margin-top:6px;
-  font-size:12px;
-  color:#991b1b;
-  white-space:pre-wrap;
+/* ===== Upload box ===== */
+.up-box{
+  border-radius: 16px;
+  border: 1px solid rgba(236,72,153,.18);
+  background: rgba(252,231,243,.35);
+  overflow: hidden;
 }
 
-.upload-modal__error{
-  margin-top:10px;
-  padding:10px 12px;
-  border-radius:12px;
-  background:#fee2e2;
-  color:#991b1b;
-  font-weight:900;
+.up-boxHead{
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  background: rgba(252,231,243,.55);
 }
 
-.upload-modal__foot{
-  display:flex;
-  justify-content:flex-end;
-  gap:10px;
-  padding:12px 14px;
-  border-top:1px solid rgba(0,0,0,.06);
+.up-actions{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-@media (max-width: 860px){
-  .upload-modal__listHead,
-  .upload-item{
-    grid-template-columns: 1fr;
+/* ===== Table ===== */
+.up-list{
+  background: #fff;
+}
+
+.up-table{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.up-table th,
+.up-table td{
+  padding: 12px 14px;
+  border-bottom: 1px dashed rgba(0,0,0,.12);
+  vertical-align: middle;
+}
+
+.up-table th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  color: rgba(0,0,0,.7);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.up-titleInput{
+  width: 100%;
+  padding: 9px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.15);
+  outline: none;
+}
+
+.up-titleInput:focus{
+  border-color: rgba(236,72,153,.6);
+  box-shadow: 0 0 0 4px rgba(236,72,153,.12);
+}
+
+.up-ok{
+  color: #065f46;
+  font-weight: 950;
+}
+
+.up-bad{
+  color: #b91c1c;
+  font-weight: 950;
+}
+
+/* ===== Footer ===== */
+.up-foot{
+  padding: 12px 18px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+  flex: 0 0 auto;
+}
+
+/* ===== Buttons (รองรับ class จาก components.css แต่กันไว้ให้สวยแม้ไม่มี) ===== */
+.btn{
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 950;
+  transition: transform .08s ease, box-shadow .18s ease;
+}
+
+.btn:hover{ box-shadow: 0 12px 26px rgba(0,0,0,.12); }
+.btn:active{ transform: scale(.99); }
+
+.btn-ghost{
+  background: #fff;
+}
+
+.btn-primary{
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #fb7185);
+}
+
+.btn.modern,
+.btn-ghost.modern,
+.btn-primary.modern{
+  /* รองรับ class ที่คุณใช้ใน JS */
+}
+
+@media (max-width: 720px){
+  .up-modal{
+    width: 96vw;
+    max-height: 90vh;
+  }
+
+  .up-boxHead{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .up-actions{
+    justify-content: flex-start;
+  }
+
+  .up-table th:nth-child(2),
+  .up-table td:nth-child(2){
+    min-width: 220px;
+  }
+
+  .up-foot{
+    flex-direction: column;
+    align-items: stretch;
   }
 }

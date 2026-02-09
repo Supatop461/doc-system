@@ -1,86 +1,334 @@
-/* =========================
-   CREATE FOLDER MODAL
-   ========================= */
+/* frontend/assets/css/folders.modal.css
+   ✅ Unified Modal + Docs table actions (folders detail)
+*/
 
-.folder-modal-overlay {
+/* overlay (ใช้ร่วมกับ detail + preview) */
+.fd-overlay{
   position: fixed;
   inset: 0;
-  z-index: 9999;
-  background: rgba(0, 0, 0, 0.35);
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 18px;
+  padding: 16px;
+  background: rgba(0,0,0,.45);
+  z-index: 9950;
 }
 
-.folder-modal {
-  width: min(640px, 100%);
+/* card */
+.fd-card{
+  width: min(920px, 96vw);
+  max-height: 86vh;
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(236,72,153,.25);
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.folder-modal-header {
+/* header */
+.fd-head{
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(252,231,243,.95), #fff);
+  border-bottom: 1px solid rgba(0,0,0,.08);
+}
+
+.fd-title{
+  margin: 0;
+  font-weight: 950;
+  color: #831843;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.fd-sub{
+  margin-top: 2px;
+  color: rgba(0,0,0,.55);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fd-x{
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.12);
+  background: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  transition: transform .08s ease, box-shadow .18s ease;
+}
+
+.fd-x:hover{
+  box-shadow: 0 10px 22px rgba(0,0,0,.12);
+}
+
+.fd-x:active{
+  transform: scale(.98);
+}
+
+/* body scroll */
+.fd-body{
   padding: 16px 18px;
-  border-bottom: 1px solid rgba(236, 72, 153, 0.15);
+  overflow: auto;
+  flex: 1 1 auto;
+}
+
+/* footer */
+.fd-foot{
+  padding: 12px 18px;
   display: flex;
   justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid rgba(0,0,0,.08);
+  background: #fff;
+}
+
+.fd-actions{
+  display: flex;
   align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.folder-modal-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #4b0030;
-}
-
-.folder-modal-close {
-  border: none;
-  background: transparent;
-  font-size: 22px;
+/* buttons (modal) */
+.fd-btn{
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
   cursor: pointer;
-  color: #9d174d;
+  font-weight: 900;
+  transition: transform .08s ease, box-shadow .18s ease;
 }
 
-.folder-modal-body {
-  padding: 18px;
+.fd-btn:hover{ box-shadow: 0 12px 26px rgba(0,0,0,.12); }
+.fd-btn:active{ transform: scale(.99); }
+
+.fd-btn-ghost{
+  background: #fff;
+}
+
+.fd-btn-primary{
+  background: linear-gradient(135deg, #ec4899, #fb7185);
+  border: none;
+  color: #fff;
+}
+
+.fd-danger{
+  background: #fff;
+  border-color: rgba(220,38,38,.35);
+  color: #b91c1c;
+}
+
+/* form */
+.fd-form{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fd-grid{
   display: grid;
-  gap: 14px;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
 }
 
-.folder-modal-body label {
-  font-weight: 700;
-  color: #4b0030;
-  font-size: 14px;
+@media (max-width: 720px){
+  .fd-grid{ grid-template-columns: 1fr; }
 }
 
-.folder-modal-body input,
-.folder-modal-body select,
-.folder-modal-body textarea {
+.fd-row{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fd-label{
+  font-weight: 950;
+  color: #831843;
+  font-size: 13px;
+}
+
+.fd-input{
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(236, 72, 153, 0.25);
+  border: 1px solid rgba(0,0,0,.15);
   outline: none;
-  font-size: 14px;
+  background: #fff;
 }
 
-.folder-modal-body textarea {
+.fd-textarea{
+  min-height: 88px;
   resize: vertical;
-  min-height: 80px;
 }
 
-.folder-modal-footer {
-  padding: 14px 18px;
+.fd-input:focus{
+  border-color: rgba(236,72,153,.6);
+  box-shadow: 0 0 0 4px rgba(236,72,153,.12);
+}
+
+/* error box */
+.folder-error{
+  display: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fee2e2;
+  border: 1px solid rgba(185,28,28,.22);
+  color: #b91c1c;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+/* docs section */
+.fd-docs{
+  margin-top: 6px;
+  border-radius: 16px;
+  border: 1px solid rgba(236,72,153,.18);
+  background: rgba(252,231,243,.35);
+  overflow: hidden;
+}
+
+.fd-docs-head{
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(0,0,0,.06);
+  background: rgba(252,231,243,.55);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.fd-docs-title{
+  font-weight: 950;
+  color: #831843;
+}
+
+.fd-docs-sub{
+  font-size: 12px;
+  color: rgba(0,0,0,.6);
+  font-weight: 800;
+  margin-top: 2px;
+}
+
+.fd-docs-tablewrap{
+  max-height: 320px;   /* ✅ ตารางมี scroll ของตัวเอง */
+  overflow: auto;
+  background: #fff;
+}
+
+.fd-docs-table{
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.fd-docs-table th,
+.fd-docs-table td{
+  padding: 12px 14px;
+  border-bottom: 1px dashed rgba(0,0,0,.12);
+  vertical-align: middle;
+}
+
+.fd-docs-table th{
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fff;
+  color: rgba(0,0,0,.7);
+  font-size: 12px;
+  font-weight: 950;
+  text-transform: none;
+}
+
+.fd-doc-name{
+  font-weight: 950;
+  color: #4a044e;
+}
+
+/* actions column */
+.fd-doc-actions{
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid rgba(236, 72, 153, 0.15);
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.folder-modal-error {
-  color: #d62828;
-  font-weight: 700;
-  font-size: 13px;
+.fd-mini{
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 12px;
+  transition: transform .08s ease, box-shadow .18s ease;
 }
+
+.fd-mini:hover{ box-shadow: 0 10px 22px rgba(0,0,0,.12); }
+.fd-mini:active{ transform: scale(.99); }
+
+.fd-mini-preview{
+  background: rgba(236,72,153,.12);
+  border-color: rgba(236,72,153,.25);
+  color: #831843;
+}
+
+.fd-mini-download{
+  background: rgba(34,197,94,.14);
+  border-color: rgba(34,197,94,.28);
+  color: #065f46;
+}
+
+.fd-mini-danger{
+  background: rgba(239,68,68,.12);
+  border-color: rgba(239,68,68,.25);
+  color: #991b1b;
+}
+
+/* preview overlay: ให้ตัวนี้อยู่หน้าสุด (เผื่อ css ชน) */
+#fdPreviewOverlay.fd-overlay{
+  z-index: 10050 !important;
+}
+
+/* tiny toast (สำหรับ folders.page.js) */
+.toast-wrap{
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 12000;
+}
+
+.toast{
+  background: #111827;
+  color: #fff;
+  padding: 10px 12px;
+  border-radius: 14px;
+  font-weight: 900;
+  opacity: 0;
+  transform: translateY(8px);
+  transition: all .2s ease;
+  box-shadow: 0 18px 40px rgba(0,0,0,.25);
+  max-width: 360px;
+  line-height: 1.3;
+  white-space: pre-wrap;
+}
+
+.toast.show{
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.toast.ok{ background: #065f46; }
+.toast.error{ background: #b91c1c; }
+.toast.info{ background: #111827; }

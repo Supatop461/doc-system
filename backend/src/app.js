@@ -12,9 +12,10 @@ import trashRouter from "./routes/trash.routes.js";
 import dashboardRoutes from "./routes/dashboard.routes.js";
 import settingsRouter from "./routes/settings.routes.js";
 import usersRouter from "./routes/users.routes.js";
-import documentTypesRouter from "./routes/documentTypes.routes.js";
-import itJobTypesRouter from "./routes/itJobTypes.routes.js";
 
+// ❌ แนะนำ “ปิดก่อน” กันชน route/ชื่อ endpoint สับสน
+// import documentTypesRouter from "./routes/documentTypes.routes.js";
+// import itJobTypesRouter from "./routes/itJobTypes.routes.js";
 
 import { startTrashPurgeJob } from "./jobs/trashPurge.job.js";
 import { authRequired } from "./middlewares/auth.js";
@@ -42,7 +43,7 @@ const __dirname = path.dirname(__filename);
 // ✅ static uploads
 app.use("/uploads", express.static(path.resolve(__dirname, "../uploads")));
 
-// ✅ dashboard routes (ถ้าเป็น backend route)
+// ✅ dashboard routes
 app.use("/dashboard", dashboardRoutes);
 
 // ✅ API
@@ -52,10 +53,17 @@ app.use("/api/auth", authRouter);
 app.use("/api/folders", foldersRouter);
 app.use("/api/documents", documentsRouter);
 app.use("/api/trash", trashRouter);
-app.use("/api", settingsRouter);
+
+// ✅ ✅ สำคัญ: ให้ตรงกับที่ frontend เรียก
+// จะได้เป็น /api/settings/document-types และ /api/settings/it-job-types
+app.use("/api/settings", settingsRouter);
+
 app.use("/api/users", usersRouter);
-app.use("/api/document-types", documentTypesRouter);
-app.use("/api/it-job-types", itJobTypesRouter);
+
+// ❌ ถ้าจะเปิดใช้ router แยก ต้อง “ตั้ง endpoint ให้ชัด” ไม่ให้ชน/สับสนกับ settings
+// app.use("/api/document-types", documentTypesRouter);
+// app.use("/api/it-job-types", itJobTypesRouter);
+
 // ✅ me
 app.get("/api/me", authRequired, (req, res) => {
   res.json({ me: req.user });

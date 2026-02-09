@@ -1,142 +1,99 @@
-/* =========================
-   CREATE FOLDER MODAL
-   ========================= */
+/* frontend/assets/css/folder-create.modal.css
+   ✅ Create Folder Modal (overlay) – modern + not-too-tall + scroll body
+*/
 
-.folder-modal-overlay {
+.folder-modal-overlay{
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,.35);
-  display: none;
+  display: none;           /* เปิดด้วย JS: flex */
   align-items: center;
   justify-content: center;
-  z-index: 9999;
-}
-
-.folder-modal {
-  width: min(520px, 100%);
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0,0,0,.2);
-  border: 1px solid rgba(236,72,153,.2);
-}
-
-.folder-modal-header {
-  padding: 14px 18px;
-  display: flex;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(0,0,0,.08);
-}
-
-.folder-modal-header h3 {
-  margin: 0;
-  color: #831843;
-}
-
-.folder-modal-body {
-  padding: 18px;
-}
-
-.folder-modal-body label {
-  font-weight: 700;
-  color: #831843;
-  display: block;
-  margin-bottom: 6px;
-}
-
-.folder-modal-body input,
-.folder-modal-body select {
-  width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(0,0,0,.15);
-  margin-bottom: 14px;
-}
-
-.folder-modal-footer {
-  padding: 14px 18px;
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  border-top: 1px solid rgba(0,0,0,.08);
-}
-
-.folder-error {
-  color: #dc2626;
-  font-weight: 700;
-  display: none;
-  margin-bottom: 10px;
-}
-/* frontend/assets/css/pages/folder-create.modal.css */
-/* =========================
-   CREATE FOLDER MODAL (polished)
-   ========================= */
-
-.folder-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,.40);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
   padding: 16px;
+  background: rgba(0,0,0,.45);
+  z-index: 9960;
 }
 
-.folder-modal {
-  width: min(560px, 100%);
+/* modal card */
+.folder-modal{
+  width: min(640px, 96vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
   background: #fff;
   border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(0,0,0,.25);
   border: 1px solid rgba(236,72,153,.22);
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
   overflow: hidden;
 }
 
-.folder-modal-header {
+/* header */
+.folder-modal-header{
   padding: 14px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: linear-gradient(180deg, rgba(252,231,243,.85), rgba(255,255,255,1));
+  gap: 12px;
+  background: linear-gradient(180deg, rgba(252,231,243,.95), #fff);
   border-bottom: 1px solid rgba(0,0,0,.08);
 }
 
-.folder-modal-header h3 {
-  margin: 0;
-  color: #831843;
+.folder-modal-header .btn.sm.ghost{
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
+  cursor: pointer;
   font-weight: 900;
 }
 
-.folder-modal-body {
-  padding: 18px;
+/* body */
+.folder-modal-body{
+  padding: 16px 18px;
+  overflow: auto;         /* ✅ scroll อยู่ใน modal */
+  flex: 1 1 auto;
 }
 
-.folder-modal-body label {
-  font-weight: 900;
-  color: #831843;
+/* labels & inputs */
+.folder-modal-body label{
   display: block;
-  margin-bottom: 6px;
+  margin: 10px 0 6px;
+  font-weight: 950;
+  color: #831843;
+  font-size: 13px;
 }
 
 .folder-modal-body input,
-.folder-modal-body select,
-.folder-modal-body textarea {
+.folder-modal-body select{
   width: 100%;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid rgba(0,0,0,.15);
-  margin-bottom: 14px;
   outline: none;
+  background: #fff;
 }
 
 .folder-modal-body input:focus,
-.folder-modal-body select:focus,
-.folder-modal-body textarea:focus {
-  border-color: rgba(236,72,153,.55);
+.folder-modal-body select:focus{
+  border-color: rgba(236,72,153,.6);
   box-shadow: 0 0 0 4px rgba(236,72,153,.12);
 }
 
-.folder-modal-footer {
-  padding: 14px 18px;
+/* error box */
+.folder-error{
+  display: none;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fee2e2;
+  border: 1px solid rgba(185,28,28,.22);
+  color: #b91c1c;
+  font-weight: 900;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+
+/* footer */
+.folder-modal-footer{
+  padding: 12px 18px;
   display: flex;
   justify-content: flex-end;
   gap: 10px;
@@ -144,13 +101,43 @@
   background: #fff;
 }
 
-.folder-error {
-  color: #b91c1c;
-  font-weight: 900;
-  display: none;
-  margin-bottom: 10px;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #fee2e2;
-  border: 1px solid rgba(185,28,28,.2);
+/* buttons */
+.folder-modal-footer .btn{
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.14);
+  background: #fff;
+  cursor: pointer;
+  font-weight: 950;
+  transition: transform .08s ease, box-shadow .18s ease;
+}
+
+.folder-modal-footer .btn:hover{
+  box-shadow: 0 12px 26px rgba(0,0,0,.12);
+}
+
+.folder-modal-footer .btn:active{
+  transform: scale(.99);
+}
+
+.folder-modal-footer .btn.primary{
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #fb7185);
+}
+
+.folder-modal-footer .btn.ghost{
+  background: #fff;
+}
+
+/* responsive */
+@media (max-width: 520px){
+  .folder-modal{
+    width: 96vw;
+    max-height: 90vh;
+  }
+  .folder-modal-footer{
+    flex-direction: column;
+    align-items: stretch;
+  }
 }

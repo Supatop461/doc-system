@@ -10,4 +10,15 @@ const router = express.Router();
  */
 router.post("/login", login);
 
+// GET /api/auth/me
+import { authRequired } from "../middlewares/auth.js";
+
+router.get("/me", authRequired, (req, res) => {
+  res.json({
+    user_id: req.user.id,
+    username: req.user.username,
+    role: req.user.role,
+  });
+});
+
 export default router;

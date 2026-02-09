@@ -1,4 +1,4 @@
-// frontend/assets/js/app.js (FINAL - use app.html layout only, no #appView injection)
+// frontend/assets/js/app.js
 (function () {
   // =========================
   // Config
@@ -15,7 +15,7 @@
     settings: `${API_BASE}/settings`,
     users: `${API_BASE}/users`,
     auth: `${API_BASE}/auth`,
-    // optional (ถ้ามีใน backend ของคุณ)
+    // optional
     documentTypes: `${API_BASE}/document-types`,
     itJobTypes: `${API_BASE}/it-job-types`,
   };
@@ -41,7 +41,6 @@
     const k = String(key);
     if (isSelector(k)) return root.querySelector(k);
 
-    // id
     if (root && typeof root.getElementById === "function") return root.getElementById(k);
     return document.getElementById(k);
   };
@@ -63,32 +62,91 @@
       .replaceAll("'", "&#039;");
 
   // =========================
-  // API / Auth
+  // API (ใช้จาก api.js)
   // =========================
-  const getToken = () => localStorage.getItem("token") || "";
-
   const apiFetch = async (url, opts = {}) => {
-    const token = getToken();
+    if (window.api?.apiFetch) return window.api.apiFetch(url, opts);
+
+    // fallback (กันพังถ้า api.js ไม่โหลด)
+    const token = localStorage.getItem("token") || "";
     const headers = new Headers(opts.headers || {});
     if (token) headers.set("Authorization", `Bearer ${token}`);
 
-    if (opts.body && typeof opts.body === "object" && !(opts.body instanceof FormData)) {
+    let body = opts.body;
+    if (body && typeof body === "object" && !(body instanceof FormData)) {
       if (!headers.get("Content-Type")) headers.set("Content-Type", "application/json");
-      opts.body = JSON.stringify(opts.body);
+      body = JSON.stringify(body);
     }
 
-    const res = await fetch(url, { ...opts, headers });
-    const data = await res.json().catch(() => ({}));
+    const res = await fetch(url, { ...opts, headers, body });
+    const text = await res.text().catch(() => "");
+    let data = {};
+    try {
+      data = text ? JSON.parse(text) : {};
+    } catch {
+      data = { message: text };
+    }
     if (!res.ok) throw new Error(data?.message || `Request failed (${res.status})`);
     return data;
   };
 
-  window.api = window.api || {};
-  window.api.apiFetch = apiFetch;
+  const getToken = () =>
+    window.api?.getToken?.() || localStorage.getItem("token") || "";
+
+  const clearSession = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+  };
+
+  const redirectToLogin = () => {
+    location.href = "./index.html";
+  };
+
+  // ✅ แสดง: บนสุด=รหัสพนักงาน, รหัส:=ไอดี, ROLE:=สิทธิ์
+  async function loadUserBox() {
+    try {
+      const token = getToken();
+      if (!token) return redirectToLogin();
+
+      const res = await fetch("http://localhost:3000/api/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (res.status === 401 || res.status === 403) {
+        clearSession();
+        return redirectToLogin();
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const me = data?.me || {};
+
+      const id = me?.id ?? me?.user_id ?? me?.userId ?? "-";
+      const role = String(me?.role || "-").toUpperCase();
+
+      const empCode =
+        me?.employee_code ??
+        me?.emp_code ??
+        me?.staff_code ??
+        me?.employeeCode ??
+        me?.username ??
+        id;
+
+      if ($("userName")) $("userName").textContent = String(empCode);
+      if ($("userCode")) $("userCode").textContent = String(id);
+      if ($("userRole")) $("userRole").textContent = role;
+    } catch (err) {
+      console.error("โหลดข้อมูลผู้ใช้ไม่สำเร็จ:", err);
+      clearSession();
+      redirectToLogin();
+    }
+  }
 
   // =========================
-  // Layout refs (อิง app.html ของคุณ)
+  // Layout refs (อิง app.html)
   // =========================
+  const panelRight = () => $("panelRight");
+  const panelLeft = () => $("panelLeft");
+
   const leftTitle = () => $("leftTitle");
   const leftBadge = () => $("leftBadge");
   const leftBody = () => $("leftBody");
@@ -102,11 +160,35 @@
 
   const lastUpdated = () => $("lastUpdated");
 
-  // ต้องมีใน app.html ไม่งั้นให้ขึ้น error ชัดๆ
   const assertLayout = () => {
     if (!leftBody() || !rightBody()) {
       throw new Error("ไม่พบโครง layout (leftBody/rightBody) ใน app.html");
     }
+  };
+
+  // =========================
+  // Right panel visibility
+  // =========================
+  const setRightPanelVisible = (visible) => {
+    const pr = panelRight();
+    if (!pr) return;
+    pr.style.display = visible ? "" : "none";
+  };
+
+  const rightHasContent = () => {
+    const t = (rightTitle()?.textContent || "").trim();
+    const h = (rightHint()?.textContent || "").trim();
+
+    const rb = rightBody();
+    let bodyHas = false;
+    if (rb) {
+      bodyHas = rb.children.length > 0 || (rb.textContent || "").trim().length > 0;
+    }
+    return t.length > 0 || h.length > 0 || bodyHas;
+  };
+
+  const autoHideRightPanelIfEmpty = () => {
+    setRightPanelVisible(rightHasContent());
   };
 
   // =========================
@@ -120,11 +202,13 @@
 
   const setUpdatedNow = () => {
     const el = lastUpdated();
-    if (el) el.textContent = `อัปเดตล่าสุด: ${new Date().toLocaleString()}`;
+    if (el) el.textContent = `อัปเดตล่าสุด: ${new Date().toLocaleString("th-TH")}`;
   };
 
+  // หน้าที่ใช้ panel ขวา เรียก showDetail ได้
   const showDetail = (html) => {
     if (rightBody()) rightBody().innerHTML = html ?? "";
+    setRightPanelVisible(true);
   };
 
   const setLoadingIntoLeft = (title) => {
@@ -145,7 +229,7 @@
     if (leftBody()) {
       leftBody().innerHTML = `
         <div style="padding:14px;">
-          <div style="font-weight:900;color:#b91c1c;">${esc(title || "เกิดข้อผิดพลาด")}</div>
+          <div style="font-weight:950;color:#b91c1c;">${esc(title || "เกิดข้อผิดพลาด")}</div>
           <div style="margin-top:8px;white-space:pre-wrap;color:#b91c1c;">${esc(
             err?.message || String(err || "")
           )}</div>
@@ -159,35 +243,38 @@
   };
 
   // =========================
-  // ⭐ Cleanup: ของใครของมัน
+  // Cleanup before route
   // =========================
   const cleanupBeforeRoute = () => {
-    // 1) ซ่อน “ตารางตัวอย่าง/โครงสำหรับต่อ API” ไม่ให้ตามทุกหน้า
-    const panelBottom = $(".panel.panel-bottom");
-    if (panelBottom) panelBottom.style.display = "none";
-
-    // 2) เคลียร์ tableBody เผื่อเคยยัดไว้
-    const tb = $("tableBody");
-    if (tb) tb.innerHTML = "";
-
-    // 3) ปิด upload modal ถ้าค้าง (ของเรา)
-    const uploadOverlay = $("uploadModalOverlay");
-    if (uploadOverlay) uploadOverlay.style.display = "none";
-
-    // 4) reset detail (✅ เอาข้อความ “คลิกแถวเพื่อดูรายละเอียด” ออก)
-    if (rightTitle()) rightTitle().innerHTML = "";
-    if (rightHint()) rightHint().innerHTML = "";
+    // เคลียร์ right panel ทุกครั้ง
+    if (rightTitle()) rightTitle().textContent = "";
+    if (rightHint()) rightHint().textContent = "";
     if (rightBody()) rightBody().innerHTML = "";
 
-    // ✅ สำคัญ: ล้าง event เดิมของปุ่ม btnNew เพื่อไม่ให้คลิกซ้ำ/ค้างจากหน้าก่อน
+    // เริ่มต้นซ่อน panel ขวาไว้ก่อน
+    setRightPanelVisible(false);
+
+    // ป้องกัน event ของ btnNew ค้างจากหน้าก่อน
     const btn = $("btnNew");
     if (btn && btn.parentNode) {
       const clone = btn.cloneNode(true);
       btn.parentNode.replaceChild(clone, btn);
     }
+
+    // ปิด overlay/modals ที่อาจค้าง (best-effort)
+    const maybeOverlays = [
+      "uploadModalOverlay",
+      "docModalOverlay",
+      "upOverlay",
+      "fdDetailOverlay",
+      "fdPreviewOverlay",
+    ];
+    maybeOverlays.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = "none";
+    });
   };
 
-  // คุมปุ่ม + เพิ่มใหม่ ให้ขึ้นเฉพาะหน้าที่ใช้
   const setBtnNewVisible = (visible, label = "+ เพิ่มใหม่") => {
     const btn = $("btnNew");
     if (!btn) return;
@@ -207,7 +294,6 @@
     return x.toLowerCase();
   };
 
-  // ✅ ระบุชัด: หน้าไหนมีปุ่มเพิ่มใหม่
   const ROUTES = {
     folders: {
       title: "แฟ้มเอกสาร",
@@ -226,48 +312,8 @@
     search: { title: "ค้นหา", desc: "ค้นหาเอกสารในระบบ", moduleKey: "search", newBtn: false },
     trash: { title: "ถังขยะ", desc: "รายการเอกสารที่ถูกลบ (กู้คืนได้)", moduleKey: "trash", newBtn: false },
     settings: { title: "ตั้งค่า", desc: "ตั้งค่าระบบเบื้องต้น", moduleKey: "settings", newBtn: false },
-    users: { title: "ผู้ใช้", desc: "จัดการผู้ใช้ (เปิด/ปิดการใช้งาน)", moduleKey: "users", newBtn: false },
+    users: { title: "ผู้ใช้", desc: "จัดการผู้ใช้", moduleKey: "users", newBtn: false },
     dashboard: { title: "Dashboard", desc: "", moduleKey: "dashboard", newBtn: false },
-  };
-
-  const loadedScripts = new Set();
-  const loadScriptOnce = (src) =>
-    new Promise((resolve, reject) => {
-      if (loadedScripts.has(src)) return resolve(true);
-
-      const already = $$("script").some((s) => (s.getAttribute("src") || "").includes(src));
-      if (already) {
-        loadedScripts.add(src);
-        return resolve(true);
-      }
-
-      const s = document.createElement("script");
-      s.src = src + (src.includes("?") ? "" : `?v=${Date.now()}`);
-      s.defer = true;
-      s.onload = () => {
-        loadedScripts.add(src);
-        resolve(true);
-      };
-      s.onerror = () => reject(new Error(`โหลดไฟล์ไม่สำเร็จ: ${src}`));
-      document.head.appendChild(s);
-    });
-
-  // ✅ inject css once
-  const ensureCssOnce = (href) => {
-    const exist = Array.from(document.querySelectorAll("link[rel='stylesheet']")).some((l) =>
-      (l.getAttribute("href") || "").includes(href)
-    );
-    if (exist) return;
-    const link = document.createElement("link");
-    link.rel = "stylesheet";
-    link.href = href + (href.includes("?") ? "" : `?v=${Date.now()}`);
-    document.head.appendChild(link);
-  };
-
-  // ✅ ให้ modal upload ทำงานทุกหน้า (โหลดครั้งเดียว)
-  const ensureUploadModalReady = async () => {
-    ensureCssOnce("assets/css/documents-upload.modal.css");
-    await loadScriptOnce("assets/js/modals/documents-upload.modal.js");
   };
 
   const applyRoute = (h) => {
@@ -279,7 +325,6 @@
 
   const setNavActive = (hash) => {
     const norm = normalizeHash(hash);
-    // ของคุณเป็น <a href="./app.html#xxx">
     $$(".nav-item").forEach((a) => {
       const href = (a.getAttribute("href") || "").trim();
       const idx = href.indexOf("#");
@@ -288,7 +333,7 @@
     });
   };
 
-  // ✅ logout bind (ของจริงใช้ window.api.logoutAndRedirect จาก api.js)
+  // logout bind
   const bindLogoutOnce = () => {
     const btn = $("btnLogout");
     if (!btn) return;
@@ -298,8 +343,7 @@
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       if (window.api?.logoutAndRedirect) return window.api.logoutAndRedirect();
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
+      clearSession();
       location.href = "./index.html";
     });
   };
@@ -307,8 +351,8 @@
   const renderRoute = async () => {
     try {
       assertLayout();
-      bindLogoutOnce(); // ✅ ให้แน่ใจว่ามีทุกหน้า
-      await ensureUploadModalReady(); // ✅ ให้ปุ่ม “เพิ่มเอกสาร” เด้ง modal ได้แน่นอน
+      bindLogoutOnce();
+
       cleanupBeforeRoute();
 
       const key = normalizeHash(location.hash).replace(/^#/, "") || "folders";
@@ -322,10 +366,6 @@
       setLoadingIntoLeft(route.title);
 
       window.pages = window.pages || {};
-
-      if (!window.pages[route.moduleKey]) {
-        await loadScriptOnce(`assets/js/pages/${route.moduleKey}.page.js`);
-      }
 
       const page = window.pages[route.moduleKey];
       if (!page || typeof page.load !== "function") {
@@ -344,6 +384,7 @@
         route: { key },
       });
 
+      autoHideRightPanelIfEmpty();
       setUpdatedNow();
     } catch (e) {
       console.error(e);
@@ -351,13 +392,15 @@
     }
   };
 
-  // ✅ ให้ modal เรียกเพื่อ “รีเฟรชหน้า” ได้หลังอัปโหลดเสร็จ
+  // ให้หน้าอื่นเรียกเพื่อรีเฟรช
   window.addEventListener("force-render-route", renderRoute);
 
-  // =========================
   // Boot
-  // =========================
   window.addEventListener("hashchange", renderRoute);
   if (!location.hash) location.hash = "#folders";
+
+  // ✅ สำคัญ: โหลดข้อมูลผู้ใช้ก่อน ให้ header ถูกทุกหน้า
+  loadUserBox();
+
   renderRoute();
 })();

@@ -31,7 +31,7 @@
         return [];
       };
 
-      const fmtDate = (d) => (d ? new Date(d).toLocaleString() : "-");
+      const fmtDate = (d) => (d ? new Date(d).toLocaleString("th-TH") : "-");
 
       const fmtBytes = (bytes) => {
         const n = Number(bytes);
@@ -99,8 +99,10 @@
       // =========================
       // Blob with Authorization
       // =========================
+      const getToken = () => window.api?.getToken?.() || localStorage.getItem("token") || "";
+
       async function fetchBlobWithAuth(url) {
-        const token = window.api?.getToken?.() || localStorage.getItem("token") || "";
+        const token = getToken();
         const headers = new Headers();
         if (token) headers.set("Authorization", `Bearer ${token}`);
 
@@ -125,12 +127,29 @@
       // Data helpers
       // =========================
       const getId = (d) => d?.document_id ?? d?.id ?? "";
-      const getName = (d) => d?.title ?? d?.document_title ?? d?.original_file_name ?? d?.name ?? "-";
+      const getTitle = (d) => d?.title ?? d?.document_title ?? "";
+      const getName = (d) => getTitle(d) || d?.original_file_name || d?.name || "-";
       const getFileName = (d) => d?.original_file_name ?? d?.file_name ?? "-";
-      const getMime = (d) => d?.mime_type ?? d?.type ?? d?.document_type_name ?? "-";
-      const getSize = (d) => d?.size_bytes ?? d?.file_size ?? d?.size ?? null;
+      const getMime = (d) => d?.mime_type ?? d?.type ?? "-";
+      const getSize = (d) => d?.file_size ?? d?.size_bytes ?? d?.size ?? null;
       const getUpdated = (d) => d?.updated_at ?? d?.created_at ?? null;
       const getFolderId = (d) => d?.folder_id ?? d?.folderId ?? d?.folder ?? null;
+
+      const extOf = (name) => {
+        const s = String(name || "").trim();
+        const m = s.match(/(\.[a-zA-Z0-9]{1,8})$/);
+        return m ? m[1] : "";
+      };
+
+      // ✅ ชื่อดาวน์โหลด: ใช้ title ก่อน + เติมนามสกุลจาก original_file_name ถ้า title ไม่มี
+      const getDownloadName = (d) => {
+        const title = String(getTitle(d) || "").trim();
+        const orig = String(getFileName(d) || "").trim();
+        const base = title || orig || `document-${getId(d)}`;
+        const ext = extOf(orig);
+        if (ext && !String(base).toLowerCase().endsWith(ext.toLowerCase())) return `${base}${ext}`;
+        return base;
+      };
 
       // folder fields
       const folderIdOf = (f) => String(f?.folder_id ?? f?.id ?? "");
@@ -141,6 +160,12 @@
       // Fetch folders tree
       // =========================
       async function fetchAllFoldersTree() {
+        // ✅ ใช้ flat all=1 ถ้ามี
+        try {
+          const flat = normalizeItems(await apiFetch(`${ENDPOINTS.folders}?all=1`));
+          if (flat.length) return flat.map((f) => ({ ...f, __depth: 0 }));
+        } catch {}
+
         const all = [];
         const visited = new Set();
 
@@ -150,7 +175,9 @@
           visited.add(`${key}:${depth}`);
 
           const url =
-            parentId == null ? `${ENDPOINTS.folders}` : `${ENDPOINTS.folders}?parent_id=${encodeURIComponent(parentId)}`;
+            parentId == null
+              ? `${ENDPOINTS.folders}`
+              : `${ENDPOINTS.folders}?parent_id=${encodeURIComponent(parentId)}`;
 
           let rows = [];
           try {
@@ -170,14 +197,6 @@
         }
 
         await walk(null, 0);
-
-        if (!all.length) {
-          try {
-            const flat = normalizeItems(await apiFetch(ENDPOINTS.folders));
-            flat.forEach((f) => all.push({ ...f, __depth: 0 }));
-          } catch {}
-        }
-
         return all;
       }
 
@@ -229,7 +248,7 @@
         const parts = [];
         let cur = byId.get(fid);
         let guard = 0;
-        while (cur && guard++ < 20) {
+        while (cur && guard++ < 30) {
           parts.push(folderNameOf(cur));
           const pid = folderParentOf(cur);
           if (pid == null || pid === "" || pid === 0) break;
@@ -245,7 +264,7 @@
       if (pageDesc) pageDesc.textContent = routeFolderId ? `เอกสารในแฟ้ม #${routeFolderId}` : "เอกสารทั้งหมด";
 
       // =========================
-      // Limit preference (✅ default 50, choose 50/100)
+      // Limit preference (default 50)
       // =========================
       const LIMIT_KEY = "docs_limit";
       const getLimit = () => {
@@ -264,7 +283,7 @@
       const folderPack = buildFolderOptions(foldersAll);
 
       // =========================
-      // Fetch documents with limit (✅)
+      // Fetch documents with limit
       // =========================
       const makeDocsUrl = (limit) => {
         const lim = Number(limit || 50);
@@ -301,12 +320,10 @@
           <div class="doc-head">
             <div>
               <div class="doc-title">รายการเอกสาร</div>
-              <div class="doc-sub">ใหม่ก่อน • ค้นหา/กรอง • ดูรายละเอียดในป๊อปอัพ “ดู”</div>
 
               <div class="doc-pills">
                 <span class="pill">📦 ดึงมา <b id="pillCount">${docsAll.length}</b> รายการ</span>
                 <span class="pill">⚙️ จำกัดที่ <b id="pillLimit">${currentLimit}</b></span>
-                <span class="pill muted">* ถ้ามีมากกว่านี้ ให้เพิ่ม Limit</span>
               </div>
             </div>
 
@@ -347,7 +364,7 @@
           <div id="docFoot" class="doc-foot"></div>
         </div>
 
-        <!-- Upload Modal (คงเดิมของคุณ) -->
+        <!-- Upload Modal -->
         <div id="upOverlay" class="up-overlay" style="display:none">
           <div class="up-modal">
             <div class="up-head">
@@ -371,7 +388,7 @@
 
               <div class="up-box">
                 <div class="up-boxHead">
-                  <div class="muted">แนะนำ 30–50 ไฟล์/ครั้ง</div>
+                  <div class="muted">สามารถเพิ่มได้ไม่เกิน50 ไฟล์/ครั้ง</div>
                   <div class="up-actions">
                     <input id="upFiles" type="file" multiple style="display:none" />
                     <button id="upPick" class="btn btn-primary modern" type="button">เลือกไฟล์</button>
@@ -466,7 +483,7 @@
       });
 
       // =========================
-      // Upload (คงเดิมของคุณ)
+      // Upload
       // =========================
       const upOverlay = $("#upOverlay");
       const upClose = $("#upClose");
@@ -549,7 +566,7 @@
         staged[idx].title = el.value;
       });
 
-      const uploadUrlPrimary = ENDPOINTS?.documentsUpload || "/api/documents/upload";
+      const uploadUrlPrimary = ENDPOINTS?.documentsUpload || `${ENDPOINTS.documents}/upload`;
       const uploadUrlFallback = "/api/documents/upload";
 
       async function uploadOneFile(fd) {
@@ -599,7 +616,6 @@
         else if (ok && bad) toast(`สำเร็จ ${ok} • ไม่สำเร็จ ${bad} (เช็คสถานะในตาราง)`, "warn", 5200);
         else toast(`อัปโหลดไม่สำเร็จ: ${lastErr}`, "error", 5200);
 
-        // รีโหลด route -> จะเด้งใหม่บนสุดตาม sort ล่าสุดก่อน
         window.dispatchEvent(new Event("force-render-route"));
       });
 
@@ -640,7 +656,7 @@
 
       function openDocModal(doc) {
         const id = String(getId(doc));
-        const name = String(getName(doc));
+        const title = String(getName(doc));
         const fileName = String(getFileName(doc));
         const mime = String(getMime(doc));
         const size = fmtBytes(getSize(doc));
@@ -648,7 +664,7 @@
         const folderId = String(getFolderId(doc) ?? "");
         const folderPath = buildFolderPath(folderPack.byId, folderId);
 
-        docModalTitle.textContent = name;
+        docModalTitle.textContent = title;
         docModalMeta.innerHTML = `
           <div class="doc-meta">
             <div><span class="doc-meta__k">แฟ้ม</span><span class="doc-meta__v">${esc(folderPath)}</span></div>
@@ -669,11 +685,12 @@
         docModalDownload.onclick = async () => {
           try {
             const blob = await fetchBlobWithAuth(downloadUrl);
+            const downloadName = getDownloadName(doc) || `document-${id}`;
             clearObjectUrl();
             currentObjectUrl = URL.createObjectURL(blob);
             const a = document.createElement("a");
             a.href = currentObjectUrl;
-            a.download = name || `document-${id}`;
+            a.download = downloadName;
             document.body.appendChild(a);
             a.click();
             a.remove();
@@ -688,12 +705,16 @@
             const blob = await fetchBlobWithAuth(previewUrl);
             clearObjectUrl();
             currentObjectUrl = URL.createObjectURL(blob);
-            const m = guessMime(name, blob.type || doc?.mime_type);
+            const m = guessMime(getDownloadName(doc), blob.type || doc?.mime_type);
 
             if (m.includes("pdf") || blob.type === "application/pdf") {
-              docModalPreview.innerHTML = `<iframe class="doc-modal__iframe" src="${esc(currentObjectUrl)}" title="${esc(name)}" loading="lazy"></iframe>`;
+              docModalPreview.innerHTML = `<iframe class="doc-modal__iframe" src="${esc(
+                currentObjectUrl
+              )}" title="${esc(title)}" loading="lazy"></iframe>`;
             } else if ((m || "").startsWith("image/")) {
-              docModalPreview.innerHTML = `<img class="doc-modal__img" src="${esc(currentObjectUrl)}" alt="${esc(name)}" />`;
+              docModalPreview.innerHTML = `<img class="doc-modal__img" src="${esc(
+                currentObjectUrl
+              )}" alt="${esc(title)}" />`;
             } else {
               docModalPreview.innerHTML = `<div class="muted">ไฟล์นี้ไม่รองรับพรีวิว กรุณากด “ดาวน์โหลด”</div>`;
               clearObjectUrl();
@@ -779,14 +800,11 @@
       };
 
       const renderCards = (rows, fullCount) => {
-        listEl.innerHTML = rows.length
-          ? rows.map(cardHtml).join("")
-          : `<div class="doc-empty">ไม่พบเอกสาร</div>`;
+        listEl.innerHTML = rows.length ? rows.map(cardHtml).join("") : `<div class="doc-empty">ไม่พบเอกสาร</div>`;
 
         if (pillCountEl) pillCountEl.textContent = String(fullCount ?? rows.length);
         if (pillLimitEl) pillLimitEl.textContent = String(currentLimit);
 
-        // badge/foot -> “แสดง X (จากที่ดึงมา Y/limit)”
         const pulled = Number(fullCount ?? rows.length);
         if (leftBadge) leftBadge.textContent = `${rows.length} รายการ`;
         if (footEl) {
@@ -801,7 +819,6 @@
       };
 
       function bindActions(rows) {
-        // click card -> open detail
         leftBody.querySelectorAll(".doc-card[data-id]").forEach((card) => {
           card.onclick = (e) => {
             if (e.target.closest("button[data-act]")) return;
@@ -811,7 +828,6 @@
           };
         });
 
-        // buttons
         leftBody.querySelectorAll("button[data-act]").forEach((btn) => {
           btn.onclick = async (e) => {
             e.preventDefault();
@@ -828,11 +844,11 @@
               const downloadUrl = `${ENDPOINTS.documents}/${encodeURIComponent(id)}/download`;
               try {
                 const blob = await fetchBlobWithAuth(downloadUrl);
-                const name = String(getName(d) || `document-${id}`);
+                const downloadName = getDownloadName(d) || `document-${id}`;
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement("a");
                 a.href = url;
-                a.download = name;
+                a.download = downloadName;
                 document.body.appendChild(a);
                 a.click();
                 a.remove();

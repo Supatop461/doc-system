@@ -16,29 +16,35 @@ const toIntOrNull = (v) => {
   return Number.isInteger(n) ? n : NaN;
 };
 
+const getNumericUserId = (req) => {
+  const raw =
+    req.user?.id ??
+    req.user?.user_id ??
+    req.user?.userId ??
+    req.user?.created_by_user_id;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+};
+
 async function getDefaultDocumentTypeId() {
-  const r = await pool.query(
-    `
+  const r = await pool.query(`
     SELECT document_type_id
     FROM public.document_types
     WHERE deleted_at IS NULL AND (is_active IS NULL OR is_active = true)
     ORDER BY document_type_id ASC
     LIMIT 1
-    `
-  );
+  `);
   return r.rows[0]?.document_type_id ?? null;
 }
 
 async function getDefaultItJobTypeId() {
-  const r = await pool.query(
-    `
+  const r = await pool.query(`
     SELECT it_job_type_id
     FROM public.it_job_types
     WHERE deleted_at IS NULL AND (is_active IS NULL OR is_active = true)
     ORDER BY it_job_type_id ASC
     LIMIT 1
-    `
-  );
+  `);
   return r.rows[0]?.it_job_type_id ?? null;
 }
 
@@ -154,12 +160,12 @@ router.get("/", authRequired, async (req, res) => {
 });
 
 // =========================
-// POST /api/folders (admin เท่านั้น)
-// ✅ FIX: กัน document_type_id / it_job_type_id เป็น NULL
+// POST /api/folders (✅ user สร้างได้)
+// FIX: กัน document_type_id / it_job_type_id เป็น NULL
 // - ถ้ามี parent_id: สืบทอดจาก parent เป็นค่าเริ่มต้น
-// - ถ้า root: ใช้ default ตัวแรกที่ active (fallback: 1) หรือบังคับก็ได้
+// - ถ้า root: ใช้ default ตัวแรกที่ active (fallback: 1)
 // =========================
-router.post("/", authRequired, requireAdmin, async (req, res) => {
+router.post("/", authRequired, async (req, res) => {
   try {
     const {
       name,
@@ -170,7 +176,7 @@ router.post("/", authRequired, requireAdmin, async (req, res) => {
       description = null,
     } = req.body || {};
 
-    const created_by = req.user?.id ?? null;
+    const created_by = getNumericUserId(req);
 
     if (!name || typeof name !== "string" || !name.trim()) {
       return res.status(400).json({ message: "ต้องมีชื่อแฟ้ม" });
@@ -237,12 +243,8 @@ router.post("/", authRequired, requireAdmin, async (req, res) => {
     }
 
     // ✅ ถ้าเป็น root แล้วยังไม่มีค่า -> ใส่ default ให้อัตโนมัติ
-    if (pid === null && !dtid) {
-      dtid = (await getDefaultDocumentTypeId()) ?? 1;
-    }
-    if (pid === null && !itid) {
-      itid = (await getDefaultItJobTypeId()) ?? 1;
-    }
+    if (pid === null && !dtid) dtid = (await getDefaultDocumentTypeId()) ?? 1;
+    if (pid === null && !itid) itid = (await getDefaultItJobTypeId()) ?? 1;
 
     // ✅ validate FK มีอยู่จริง (กันใส่มั่ว)
     if (dtid && !(await assertDocTypeExists(dtid))) {
@@ -280,7 +282,6 @@ router.post("/", authRequired, requireAdmin, async (req, res) => {
 
 // =========================
 // PATCH /api/folders/:id (admin เท่านั้น)
-// ✅ ใช้สำหรับ "ตั้งค่าแฟ้ม" ภายหลัง: document_type_id / it_job_type_id / prefix / description / name
 // =========================
 router.patch("/:id", authRequired, requireAdmin, async (req, res) => {
   try {
@@ -370,9 +371,7 @@ router.patch("/:id", authRequired, requireAdmin, async (req, res) => {
 
 /**
  * DELETE /api/folders/:id (admin เท่านั้น)
- * ✅ Policy: ลบได้เฉพาะ "แฟ้มว่าง"
- * - ห้ามลบถ้ายังมีแฟ้มย่อยที่ยังไม่ถูกลบ (deleted_at IS NULL)
- * - ห้ามลบถ้ายังมีเอกสารที่ยังไม่ถูกลบอยู่ในแฟ้มนี้หรือแฟ้มลูกหลานทั้งหมด
+ * Policy: ลบได้เฉพาะ "แฟ้มว่าง"
  */
 router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
   try {
@@ -381,7 +380,6 @@ router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
       return res.status(400).json({ message: "id must be an integer" });
     }
 
-    // 1) ต้องมีแฟ้มนี้อยู่และยังไม่ถูกลบ
     const exists = await pool.query(
       `SELECT folder_id, name FROM folders WHERE folder_id = $1 AND deleted_at IS NULL LIMIT 1`,
       [id]
@@ -390,7 +388,6 @@ router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
       return res.status(404).json({ message: "Folder not found" });
     }
 
-    // 2) ห้ามลบถ้ามีแฟ้มย่อย (ที่ยังไม่ถูกลบ)
     const child = await pool.query(
       `SELECT 1 FROM folders WHERE parent_id = $1 AND deleted_at IS NULL LIMIT 1`,
       [id]
@@ -402,16 +399,13 @@ router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
       });
     }
 
-    // 3) ห้ามลบถ้ามีเอกสารในแฟ้มนี้ หรือในแฟ้มลูกหลานทั้งหมด
     const docs = await pool.query(
       `
       WITH RECURSIVE tree AS (
         SELECT folder_id
         FROM folders
         WHERE folder_id = $1
-
         UNION ALL
-
         SELECT f.folder_id
         FROM folders f
         JOIN tree t ON f.parent_id = t.folder_id
@@ -433,7 +427,6 @@ router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
       });
     }
 
-    // 4) ผ่านเงื่อนไขทั้งหมด → ลบได้ (soft delete)
     const result = await pool.query(
       `
       UPDATE folders

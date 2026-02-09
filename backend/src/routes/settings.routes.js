@@ -5,36 +5,26 @@ import { authRequired, requireAdmin } from "../middlewares/auth.js";
 import {
   listDocumentTypes,
   createDocumentType,
+  updateDocumentType,
+  deleteDocumentType,
   listItJobTypes,
   createItJobType,
+  updateItJobType,
+  deleteItJobType,
 } from "../controllers/settings.controller.js";
 
 const router = Router();
 
-/**
- * GET /api/document-types
- * optional: ?include_inactive=1
- */
+// Document Types
 router.get("/document-types", authRequired, listDocumentTypes);
-
-/**
- * POST /api/document-types
- * admin only
- * body: { name, is_active? }
- */
 router.post("/document-types", authRequired, requireAdmin, createDocumentType);
+router.patch("/document-types/:id", authRequired, requireAdmin, updateDocumentType);
+router.delete("/document-types/:id", authRequired, requireAdmin, deleteDocumentType);
 
-/**
- * GET /api/it-job-types
- * optional: ?include_inactive=1
- */
+// IT Job Types
 router.get("/it-job-types", authRequired, listItJobTypes);
-
-/**
- * POST /api/it-job-types
- * admin only
- * body: { name, is_active? }
- */
 router.post("/it-job-types", authRequired, requireAdmin, createItJobType);
+router.patch("/it-job-types/:id", authRequired, requireAdmin, updateItJobType);
+router.delete("/it-job-types/:id", authRequired, requireAdmin, deleteItJobType);
 
 export default router;

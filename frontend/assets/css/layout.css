@@ -1,21 +1,25 @@
-/* =========================
-   LAYOUT CSS
-   ใช้กับทุกหน้าหลัง Login (Header + เมนู)
-   ========================= */
+/* frontend/assets/css/layout.css
+   ✅ Layout (Header + Nav + Page header) – modern & consistent
+*/
 
 /* โครงหน้า */
-.app-shell {
+.app-shell{
   min-height: 100vh;
 }
 
-/* Header */
-.app-header {
-  background: rgba(255, 255, 255, 0.9);
-  border-bottom: 1px solid rgba(236, 72, 153, 0.15);
-  backdrop-filter: blur(6px);
+/* =========================
+   Header
+   ========================= */
+.app-header{
+  position: sticky;
+  top: 0;
+  z-index: 9000;
+  background: rgba(255,255,255,.88);
+  border-bottom: 1px solid rgba(236,72,153,.15);
+  backdrop-filter: blur(8px);
 }
 
-.app-header-inner {
+.app-header-inner{
   max-width: 1100px;
   margin: 0 auto;
   padding: 14px 16px;
@@ -26,83 +30,105 @@
 }
 
 /* ซ้าย: โลโก้ + ชื่อ */
-.brand {
+.brand{
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
-.brand-logo {
+.brand-logo{
   width: 44px;
   height: 44px;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #fff;
-  box-shadow: 0 8px 18px rgba(236, 72, 153, 0.18);
+  border: 1px solid rgba(236,72,153,.14);
+  box-shadow: 0 10px 22px rgba(236,72,153,.12);
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+  flex: 0 0 auto;
 }
 
-.brand-logo img {
+.brand-logo img{
   width: 100%;
   height: 100%;
   object-fit: contain;
 }
 
-.brand-text {
+.brand-text{
   line-height: 1.2;
+  min-width: 0;
 }
 
-.brand-title {
+.brand-title{
   font-size: 18px;
-  font-weight: 700;
+  font-weight: 950;
   color: #ec4899;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.brand-subtitle {
+.brand-subtitle{
   font-size: 13px;
-  color: #666;
-  font-weight: 500;
-  margin-top: 2px;
+  color: rgba(0,0,0,.6);
+  font-weight: 800;
+  margin-top: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ขวา: user + logout */
-.userbox {
+.userbox{
+  display: flex;
+  align-items: center;
+  gap: 10px;
   text-align: right;
-  line-height: 1.2;
+  line-height: 1.15;
+  flex: 0 0 auto;
 }
 
-.user-name {
+.user-name{
   font-size: 14px;
-  font-weight: 700;
-  color: #333;
+  font-weight: 950;
+  color: rgba(0,0,0,.78);
 }
 
-.user-meta {
+.user-meta{
   font-size: 12px;
-  color: #777;
-  margin-top: 2px;
+  color: rgba(0,0,0,.55);
+  font-weight: 800;
+  margin-top: 3px;
 }
 
 /* ปุ่มออกจากระบบ */
-.btn-logout {
-  margin-left: 10px;
+.btn-logout{
   padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(236, 72, 153, 0.25);
+  border-radius: 999px;
+  border: 1px solid rgba(236,72,153,.25);
   background: #fff;
   color: #ec4899;
-  font-weight: 700;
+  font-weight: 950;
   cursor: pointer;
+  transition: transform .08s ease, box-shadow .18s ease, background .18s ease;
 }
 
-.btn-logout:hover {
-  background: rgba(236, 72, 153, 0.06);
+.btn-logout:hover{
+  background: rgba(236,72,153,.06);
+  box-shadow: 0 12px 26px rgba(0,0,0,.10);
 }
 
-/* เมนู (แท็บ) */
-.app-nav {
+.btn-logout:active{
+  transform: scale(.99);
+}
+
+/* =========================
+   Nav Tabs
+   ========================= */
+.app-nav{
   max-width: 1100px;
   margin: 0 auto;
   padding: 10px 16px 14px;
@@ -111,46 +137,123 @@
   flex-wrap: wrap;
 }
 
-.nav-item {
+.nav-item{
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 14px;
-  color: #444;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(236, 72, 153, 0.12);
+  border-radius: 999px;
+  color: rgba(0,0,0,.72);
+  background: rgba(255,255,255,.75);
+  border: 1px solid rgba(236,72,153,.12);
   cursor: pointer;
-  font-weight: 700;
+  font-weight: 950;
   font-size: 14px;
+  transition: transform .08s ease, box-shadow .18s ease, background .18s ease;
+  user-select: none;
 }
 
-.nav-item:hover {
-  background: rgba(236, 72, 153, 0.06);
+.nav-item:hover{
+  background: rgba(236,72,153,.06);
+  box-shadow: 0 12px 26px rgba(0,0,0,.08);
 }
 
-.nav-item.active {
-  background: #ec4899;
+.nav-item:active{
+  transform: scale(.99);
+}
+
+.nav-item.active{
+  background: linear-gradient(135deg, #ec4899, #fb7185);
   color: #fff;
   border-color: transparent;
+  box-shadow: 0 16px 34px rgba(236,72,153,.18);
 }
 
-/* เนื้อหากลางหน้า */
-.app-content {
+/* =========================
+   Content area
+   ========================= */
+.app-content{
   max-width: 1100px;
   margin: 0 auto;
   padding: 18px 16px 30px;
 }
 
-/* มือถือ: ลดความหนาแน่น */
-@media (max-width: 480px) {
-  .brand-title {
-    font-size: 16px;
+/* =========================
+   Page header (ใช้กับ app.js / app.html)
+   - #pageTitle, #pageDesc, #btnNew
+   ========================= */
+.page-head{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+#pageTitle{
+  font-size: 20px;
+  font-weight: 950;
+  color: rgba(0,0,0,.86);
+  margin: 0;
+}
+
+#pageDesc{
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: rgba(0,0,0,.58);
+}
+
+#btnNew{
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #ec4899, #fb7185);
+  font-weight: 950;
+  cursor: pointer;
+  transition: transform .08s ease, box-shadow .18s ease, filter .18s ease;
+  box-shadow: 0 14px 30px rgba(236,72,153,.18);
+}
+
+#btnNew:hover{ filter: brightness(1.02); }
+#btnNew:active{ transform: scale(.99); }
+
+/* =========================
+   Responsive
+   ========================= */
+@media (max-width: 720px){
+  .app-header-inner{
+    padding: 12px 14px;
   }
-  .brand-subtitle {
-    font-size: 12px;
+
+  .brand-title{ font-size: 16px; }
+  .brand-subtitle{ font-size: 12px; }
+
+  .app-nav{
+    padding: 10px 14px 12px;
   }
-  .btn-logout {
+
+  .nav-item{
+    padding: 9px 12px;
+    font-size: 13px;
+  }
+
+  .app-content{
+    padding: 16px 14px 28px;
+  }
+}
+
+@media (max-width: 480px){
+  .userbox{
+    gap: 8px;
+  }
+  .btn-logout{
     padding: 9px 10px;
+  }
+  #btnNew{
+    width: 100%;
+    justify-content: center;
   }
 }

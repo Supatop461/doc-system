@@ -1,38 +1,148 @@
-/* =========================
-   BASE CSS
-   พื้นฐานทั้งระบบ
-   ========================= */
+/* frontend/assets/css/base.css
+   ✅ Base styles: font, background, reset, common utilities
+*/
 
-/* reset เบา ๆ */
-* {
-  box-sizing: border-box;
+:root{
+  --bg: #fff;
+  --surface: #ffffff;
+  --surface-2: rgba(252,231,243,.35);
+  --text: rgba(0,0,0,.86);
+  --muted: rgba(0,0,0,.58);
+  --border: rgba(0,0,0,.12);
+
+  --pink-50: #fdf2f8;
+  --pink-100: #fce7f3;
+  --pink-500: #ec4899;
+  --rose-400: #fb7185;
+
+  --shadow-sm: 0 10px 26px rgba(0,0,0,.06);
+  --shadow-md: 0 18px 40px rgba(0,0,0,.14);
+  --radius: 16px;
+}
+
+/* Reset (เบา ๆ) */
+*{ box-sizing: border-box; }
+html, body{ height: 100%; }
+
+body{
   margin: 0;
-  padding: 0;
-  font-family: "Kanit", sans-serif;
+  font-family: "Kanit", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  color: var(--text);
+  background:
+    radial-gradient(1200px 600px at 10% 0%, rgba(236,72,153,.12), transparent 55%),
+    radial-gradient(1200px 600px at 90% 0%, rgba(251,113,133,.10), transparent 55%),
+    linear-gradient(180deg, #ffffff, #ffffff);
 }
 
-/* body หลัก */
-body {
-  min-height: 100vh;
-  background: linear-gradient(180deg, #fde7f3, #fbcfe8);
-  color: #333;
-}
-
-/* ตัวอักษรพื้นฐาน */
-h1, h2, h3, h4 {
-  font-weight: 500;
-}
-
-p {
-  line-height: 1.5;
-}
-
-/* link */
-a {
-  color: #ec4899;
+/* ลิงก์ */
+a{
+  color: inherit;
   text-decoration: none;
 }
+a:hover{ text-decoration: none; }
 
-a:hover {
-  text-decoration: underline;
+/* รูป */
+img{ max-width: 100%; display: block; }
+
+/* ปุ่ม/อินพุตให้ดูสม่ำเสมอ */
+button, input, select, textarea{
+  font-family: inherit;
+  font-size: 14px;
+}
+
+/* Selection */
+::selection{
+  background: rgba(236,72,153,.22);
+}
+
+/* Scrollbar (optional, ไม่ทำให้พังถ้า browser ไม่รองรับ) */
+::-webkit-scrollbar{ width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,.16);
+  border-radius: 999px;
+  border: 2px solid rgba(255,255,255,.9);
+}
+::-webkit-scrollbar-track{ background: transparent; }
+
+/* Utilities */
+.hidden{ display: none !important; }
+.muted{ color: var(--muted); font-weight: 700; }
+.mono{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+}
+.card{
+  background: var(--surface);
+  border: 1px solid rgba(236,72,153,.12);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+.hr{
+  height: 1px;
+  background: rgba(0,0,0,.08);
+  border: none;
+  margin: 12px 0;
+}
+
+/* Page columns (ถ้าหน้าคุณใช้ left/right layout) */
+.page-grid{
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  gap: 14px;
+  align-items: start;
+}
+
+@media (max-width: 980px){
+  .page-grid{
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Left/Right panels (เผื่อใช้กับ #leftBody/#rightBody) */
+.panel{
+  background: #fff;
+  border: 1px solid rgba(236,72,153,.12);
+  border-radius: 16px;
+  box-shadow: 0 10px 26px rgba(0,0,0,.06);
+  overflow: hidden;
+}
+
+.panel-head{
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid rgba(0,0,0,.08);
+  background: linear-gradient(180deg, rgba(252,231,243,.55), #fff);
+}
+
+.panel-title{
+  font-weight: 950;
+  color: #111827;
+}
+
+.panel-badge{
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(252,231,243,.75);
+  border: 1px solid rgba(236,72,153,.18);
+  color: #831843;
+  font-weight: 950;
+  font-size: 12px;
+}
+
+.panel-body{
+  padding: 12px 14px;
+}
+
+/* Tiny dot separator */
+.dot{
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.25);
+  margin: 0 8px;
+  transform: translateY(-1px);
 }

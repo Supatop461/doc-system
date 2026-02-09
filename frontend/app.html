@@ -47,7 +47,7 @@
   <!-- Header -->
   <header class="top-header">
     <div class="brand">
-      <div class="brand-icon" aria-hidden="true">🖥️</div>
+      <div class="brand-icon" aria-hidden="true">🗂️</div>
       <div class="brand-text">
         <div class="brand-title">ระบบจัดการเอกสารหน่วย IT</div>
         <div class="brand-sub">โรงพยาบาลธนบุรี ราษฎร์ยินดี</div>
@@ -56,10 +56,11 @@
 
     <div class="userbox">
       <div class="user-meta">
-        <div class="user-name" id="userName">แอดมิน</div>
+        <!-- ✅ แก้เฉพาะ default ให้ไม่ hardcode -->
+        <div class="user-name" id="userName">-</div>
         <div class="user-sub">
-          รหัส: <span id="userCode">admin</span><br/>
-          ROLE: <span class="role" id="userRole">ADMIN</span>
+          รหัส: <span id="userCode">-</span><br/>
+          ROLE: <span class="role" id="userRole">-</span>
         </div>
       </div>
       <button class="btn btn-ghost" id="btnLogout" type="button">ออกจากระบบ</button>
@@ -109,29 +110,6 @@
       </article>
     </section>
 
-    <!-- ✅ Folder Documents Modal (เอกสารในแฟ้ม) -->
-    <div id="folderDocsModal" class="modal hidden" aria-hidden="true">
-      <div class="modal-card large">
-        <div class="modal-header">
-          <h3 id="folderDocsTitle">เอกสารในแฟ้ม</h3>
-          <button class="modal-close" type="button" onclick="closeFolderDocs()">✕</button>
-        </div>
-
-        <div class="modal-body">
-          <table class="doc-table">
-            <thead>
-              <tr>
-                <th>ชื่อเอกสาร</th>
-                <th>ประเภท</th>
-                <th style="width:180px">การทำงาน</th>
-              </tr>
-            </thead>
-            <tbody id="folderDocsBody"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
     <footer class="footer">
       <span id="lastUpdated">อัปเดตล่าสุด: -</span>
     </footer>
@@ -149,8 +127,12 @@
   <!-- ✅ โหลด page modules ก่อน app.js -->
   <script src="./assets/js/pages/folders.page.js"></script>
   <script src="./assets/js/pages/documents.page.js"></script>
+  <script src="./assets/js/pages/search.page.js"></script>
   <script src="./assets/js/pages/trash.page.js"></script>
   <script src="./assets/js/pages/settings.page.js"></script>
+
+  <!-- ✅ NEW: users page (แก้ error window.pages.users.load) -->
+  <script src="./assets/js/pages/users.page.js"></script>
 
   <!-- ✅ สำคัญ: โหลด upload modal -->
   <script src="./assets/js/modals/documents-upload.modal.js"></script>

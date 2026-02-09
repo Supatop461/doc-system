@@ -1,73 +1,93 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>ระบบจัดการเอกสารหน่วย IT</title>
 
-  <!-- Google Font -->
+  <!-- Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link
-    href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap"
-    rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <!-- CSS (เรียงจากกว้าง -> เฉพาะหน้า) -->
-  <link rel="stylesheet" href="assets/css/base.css">
-  <link rel="stylesheet" href="assets/css/components.css">
-  <link rel="stylesheet" href="assets/css/pages/login.css">
+  <!-- Core -->
+  <link rel="stylesheet" href="/assets/css/base.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
+
+  <!-- ✅ Login CSS (ของคุณอยู่ใน pages) -->
+  <link rel="stylesheet" href="/assets/css/pages/login.css">
 </head>
 
-<body>
+<body class="login-body">
+
+  <div class="login-bg">
+    <div class="login-orb orb-1"></div>
+    <div class="login-orb orb-2"></div>
+    <div class="login-orb orb-3"></div>
+  </div>
 
   <div class="page-center">
-    <div class="card login-card">
+    <div class="login-shell">
+      <div class="card login-card">
 
-      <!-- โลโก้ -->
-      <div class="logo">
-        <img src="assets/images/THG-RYH-V.png" alt="THG / RYH">
+        <div class="logo">
+          <img src="/assets/images/THG-RYH-V.png" alt="THG / RYH">
+        </div>
+
+        <h2 class="title">ระบบจัดการเอกสารหน่วย</h2>
+        <p class="subtitle">โรงพยาบาลธนบุรี ราษฎร์ยินดี</p>
+        <p class="unit">หน่วย IT</p>
+
+        <form id="loginForm" autocomplete="on">
+          <div class="form-group">
+            <label for="username">รหัสพนักงาน</label>
+            <div class="field field-user">
+              <input
+                id="username"
+                name="username"
+                type="text"
+                placeholder="กรอกรหัสพนักงาน"
+                required
+                autocomplete="username">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password">รหัสผ่าน</label>
+            <div class="field field-pass">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                placeholder="กรอกรหัสผ่าน"
+                required
+                autocomplete="current-password">
+
+              <!-- 👁️ Toggle -->
+              <button type="button" class="pw-toggle" id="pwToggle" aria-label="แสดง/ซ่อนรหัสผ่าน">
+                <span class="pw-ico pw-eye" aria-hidden="true"></span>
+              </button>
+            </div>
+          </div>
+
+          <button id="loginBtn" class="btn-primary login-btn" type="submit">
+            <span class="btn-text">เข้าสู่ระบบ</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
+          </button>
+
+          <p id="error" class="error-text"></p>
+
+          <div class="login-footnote">
+            <span class="dot"></span>
+            •  Thonburi Rajyindee Hospital Document System  
+            
+          </div>
+        </form>
+
       </div>
-
-      <!-- ชื่อระบบ -->
-      <h2 class="title">ระบบจัดการเอกสารหน่วย</h2>
-      <p class="subtitle">โรงพยาบาลธนบุรี ราษฎร์ยินดี</p>
-      <p class="unit">หน่วย IT</p>
-
-      <!-- ฟอร์ม -->
-      <form id="loginForm" autocomplete="on">
-        <div class="form-group">
-          <label for="username">รหัสพนักงาน</label>
-          <input
-            id="username"
-            name="username"
-            type="text"
-            placeholder="กรอกรหัสพนักงาน"
-            required
-            autocomplete="username">
-        </div>
-
-        <div class="form-group">
-          <label for="password">รหัสผ่าน</label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            placeholder="กรอกรหัสผ่าน"
-            required
-            autocomplete="current-password">
-        </div>
-
-        <button id="loginBtn" class="btn-primary" type="submit">
-          เข้าสู่ระบบ
-        </button>
-
-        <!-- error จาก backend -->
-        <p id="error" class="error-text"></p>
-      </form>
-
     </div>
   </div>
 
-  <!-- ================= JavaScript ================= -->
-  <script src="assets/js/login.js"></script>
+  <script src="/assets/js/login.js"></script>
 </body>
 </html>
