@@ -8,7 +8,12 @@ import {
   getDocument,
   downloadDocument,
   previewDocument,
-  renameDocument, // ✅ NEW: rename title
+  renameDocument,
+
+  // ✅ TOP direct
+  downloadTopFile,
+  previewTopFile,
+  deleteTopFile,
 } from "../controllers/documents.controller.js";
 
 import {
@@ -92,7 +97,13 @@ router.post(
   uploadDocument
 );
 
-// --- List documents (ควรเป็นรายการที่ไม่อยู่ในถังขยะ) ---
+// ✅ TOP direct routes (สำหรับไฟล์ที่อยู่ใน C:\xampp\htdocs\top แต่ไม่มี DB)
+// ต้องมาก่อน /:id
+router.get("/top/:name/download", authRequired, downloadTopFile);
+router.get("/top/:name/preview", authRequired, previewTopFile);
+router.delete("/top/:name", authRequired, deleteTopFile);
+
+// --- List documents (รวม DB + TOP) ---
 router.get("/", authRequired, listDocuments);
 
 /**
@@ -107,7 +118,6 @@ router.patch("/:id", authRequired, validateIdParam, (req, res, next) => {
 /**
  * ✅ DELETE /api/documents/:id
  * ย้ายเข้า "ถังขยะ" (soft delete)
- * FIX: deleted_by เป็น BIGINT -> ต้องส่ง user_id (ตัวเลข)
  */
 router.delete("/:id", authRequired, validateIdParam, async (req, res) => {
   try {
@@ -145,39 +155,6 @@ router.delete("/:id", authRequired, validateIdParam, async (req, res) => {
     return res.status(500).json({ ok: false, message: "DOCUMENT_DELETE_FAILED" });
   }
 });
-
-/**
- * OPTIONAL: restore ผ่าน documents ก็ได้ (แต่หลักๆ แนะนำใช้ /api/trash)
- */
-async function restoreDocHandler(req, res) {
-  try {
-    const { id } = req.params;
-
-    const { rowCount } = await pool.query(
-      `
-      UPDATE documents
-      SET deleted_at = NULL,
-          deleted_by = NULL,
-          updated_at = NOW()
-      WHERE document_id = $1
-        AND deleted_at IS NOT NULL
-      `,
-      [id]
-    );
-
-    if (!rowCount) {
-      return res.status(404).json({ ok: false, message: "NOT_FOUND_IN_TRASH" });
-    }
-
-    return res.json({ ok: true });
-  } catch (err) {
-    console.error("DOCUMENT RESTORE error:", err);
-    return res.status(500).json({ ok: false, message: "DOCUMENT_RESTORE_FAILED" });
-  }
-}
-
-router.post("/:id/restore", authRequired, validateIdParam, restoreDocHandler);
-router.patch("/:id/restore", authRequired, validateIdParam, restoreDocHandler);
 
 // --- Preview/Download ต้องมาก่อน GET /:id ---
 router.get("/:id/preview", authRequired, validateIdParam, (req, res, next) => {

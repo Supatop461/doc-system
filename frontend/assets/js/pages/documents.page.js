@@ -116,7 +116,7 @@
           let msg = text || `Request failed (${res.status})`;
           try {
             const j = text ? JSON.parse(text) : {};
-            msg = j?.message || msg;
+            msg = j?.message || j?.error || msg;
           } catch {}
           throw new Error(msg);
         }
@@ -130,10 +130,13 @@
       const getTitle = (d) => d?.title ?? d?.document_title ?? "";
       const getName = (d) => getTitle(d) || d?.original_file_name || d?.name || "-";
       const getFileName = (d) => d?.original_file_name ?? d?.file_name ?? "-";
+      const getStored = (d) => d?.stored_file_name ?? d?.stored_name ?? "";
       const getMime = (d) => d?.mime_type ?? d?.type ?? "-";
       const getSize = (d) => d?.file_size ?? d?.size_bytes ?? d?.size ?? null;
       const getUpdated = (d) => d?.updated_at ?? d?.created_at ?? null;
       const getFolderId = (d) => d?.folder_id ?? d?.folderId ?? d?.folder ?? null;
+
+      const isTopDoc = (d) => String(d?.source || "").toUpperCase() === "TOP";
 
       const extOf = (name) => {
         const s = String(name || "").trim();
@@ -151,16 +154,10 @@
         return base;
       };
 
-      // folder fields
-      const folderIdOf = (f) => String(f?.folder_id ?? f?.id ?? "");
-      const folderNameOf = (f) => String(f?.name ?? f?.folder_name ?? `แฟ้ม ${folderIdOf(f)}`);
-      const folderParentOf = (f) => f?.parent_id ?? f?.parentId ?? f?.parent ?? null;
-
       // =========================
       // Fetch folders tree
       // =========================
       async function fetchAllFoldersTree() {
-        // ✅ ใช้ flat all=1 ถ้ามี
         try {
           const flat = normalizeItems(await apiFetch(`${ENDPOINTS.folders}?all=1`));
           if (flat.length) return flat.map((f) => ({ ...f, __depth: 0 }));
@@ -186,12 +183,12 @@
             rows = [];
           }
 
-          rows.sort((a, b) => folderNameOf(a).localeCompare(folderNameOf(b), "th"));
+          rows.sort((a, b) => String(a?.name || "").localeCompare(String(b?.name || ""), "th"));
 
           for (const f of rows) {
-            const id = folderIdOf(f);
+            const id = String(f?.folder_id ?? f?.id ?? "");
             if (!id) continue;
-            if (!all.find((x) => folderIdOf(x) === id)) all.push({ ...f, __depth: depth });
+            if (!all.find((x) => String(x?.folder_id ?? x?.id ?? "") === id)) all.push({ ...f, __depth: depth });
             await walk(id, depth + 1);
           }
         }
@@ -203,6 +200,10 @@
       function buildFolderOptions(folders) {
         const map = new Map(); // parentId -> children[]
         const byId = new Map();
+
+        const folderIdOf = (f) => String(f?.folder_id ?? f?.id ?? "");
+        const folderNameOf = (f) => String(f?.name ?? f?.folder_name ?? `แฟ้ม ${folderIdOf(f)}`);
+        const folderParentOf = (f) => f?.parent_id ?? f?.parentId ?? f?.parent ?? null;
 
         folders.forEach((f) => {
           const id = folderIdOf(f);
@@ -241,10 +242,12 @@
         return { ordered, byId, html: lines.join("") };
       }
 
-      // ✅ สร้าง path แฟ้ม: แฟ้มหลัก / ย่อย / ย่อย
       function buildFolderPath(byId, folderId) {
         const fid = String(folderId ?? "").trim();
-        if (!fid) return "-";
+        if (!fid) return "— (ไฟล์ใน TOP)";
+        const folderNameOf = (f) => String(f?.name ?? f?.folder_name ?? `แฟ้ม ${fid}`);
+        const folderParentOf = (f) => f?.parent_id ?? f?.parentId ?? f?.parent ?? null;
+
         const parts = [];
         let cur = byId.get(fid);
         let guard = 0;
@@ -283,16 +286,16 @@
       const folderPack = buildFolderOptions(foldersAll);
 
       // =========================
-      // Fetch documents with limit
+      // Fetch documents with limit (include_top=1 default)
       // =========================
       const makeDocsUrl = (limit) => {
         const lim = Number(limit || 50);
         if (routeFolderId) {
           return `${ENDPOINTS.documents}?folder_id=${encodeURIComponent(routeFolderId)}&limit=${encodeURIComponent(
             lim
-          )}&offset=0`;
+          )}&offset=0&include_top=1`;
         }
-        return `${ENDPOINTS.documents}?limit=${encodeURIComponent(lim)}&offset=0`;
+        return `${ENDPOINTS.documents}?limit=${encodeURIComponent(lim)}&offset=0&include_top=1`;
       };
 
       let docsAll = [];
@@ -334,8 +337,8 @@
                 <option value="">ทุกแฟ้ม</option>
                 ${folderPack.ordered
                   .map((f) => {
-                    const id = folderIdOf(f);
-                    const name = folderNameOf(f);
+                    const id = String(f?.folder_id ?? f?.id ?? "");
+                    const name = String(f?.name ?? f?.folder_name ?? `แฟ้ม ${id}`);
                     const d = Number(f.__depth || 0);
                     const indent = d === 0 ? "" : `${"&nbsp;".repeat(d * 4)}└─ `;
                     const badge = d === 0 ? "📁" : "📂";
@@ -364,7 +367,7 @@
           <div id="docFoot" class="doc-foot"></div>
         </div>
 
-        <!-- Upload Modal -->
+        <!-- Upload Modal (เดิม) -->
         <div id="upOverlay" class="up-overlay" style="display:none">
           <div class="up-modal">
             <div class="up-head">
@@ -483,7 +486,7 @@
       });
 
       // =========================
-      // Upload
+      // Upload (เดิมของคุณ)
       // =========================
       const upOverlay = $("#upOverlay");
       const upClose = $("#upClose");
@@ -654,6 +657,23 @@
         return "";
       }
 
+      function buildUrlsForDoc(doc) {
+        const id = String(getId(doc));
+        if (isTopDoc(doc)) {
+          const name = encodeURIComponent(getStored(doc) || getFileName(doc) || "");
+          return {
+            downloadUrl: `/api/documents/top/${name}/download`,
+            previewUrl: `/api/documents/top/${name}/preview`,
+            deleteUrl: `/api/documents/top/${name}`,
+          };
+        }
+        return {
+          downloadUrl: `${ENDPOINTS.documents}/${encodeURIComponent(id)}/download`,
+          previewUrl: `${ENDPOINTS.documents}/${encodeURIComponent(id)}/preview`,
+          deleteUrl: `${ENDPOINTS.documents}/${encodeURIComponent(id)}`,
+        };
+      }
+
       function openDocModal(doc) {
         const id = String(getId(doc));
         const title = String(getName(doc));
@@ -667,6 +687,7 @@
         docModalTitle.textContent = title;
         docModalMeta.innerHTML = `
           <div class="doc-meta">
+            <div><span class="doc-meta__k">แหล่ง</span><span class="doc-meta__v">${isTopDoc(doc) ? "TOP (ไฟล์กลาง)" : "DATABASE"}</span></div>
             <div><span class="doc-meta__k">แฟ้ม</span><span class="doc-meta__v">${esc(folderPath)}</span></div>
             <div><span class="doc-meta__k">ID</span><span class="doc-meta__v">${esc(id)}</span></div>
             <div><span class="doc-meta__k">ไฟล์</span><span class="doc-meta__v">${esc(fileName)}</span></div>
@@ -679,8 +700,7 @@
         clearObjectUrl();
         docModalPreview.innerHTML = `<div class="muted">กด “เปิดพรีวิว” เพื่อแสดงไฟล์ (รองรับ PDF/รูปภาพ)</div>`;
 
-        const downloadUrl = `${ENDPOINTS.documents}/${encodeURIComponent(id)}/download`;
-        const previewUrl = `${ENDPOINTS.documents}/${encodeURIComponent(id)}/preview`;
+        const { downloadUrl, previewUrl, deleteUrl } = buildUrlsForDoc(doc);
 
         docModalDownload.onclick = async () => {
           try {
@@ -727,7 +747,7 @@
         docModalTrash.onclick = async () => {
           if (!confirm("ยืนยันลบเอกสารนี้? (ย้ายไปถังขยะ)")) return;
           try {
-            await apiFetch(`${ENDPOINTS.documents}/${encodeURIComponent(id)}`, { method: "DELETE" });
+            await apiFetch(deleteUrl, { method: "DELETE" });
             toast("ย้ายไปถังขยะแล้ว", "success");
             clearObjectUrl();
             docModalOverlay.style.display = "none";
@@ -759,11 +779,16 @@
         const folderPath = buildFolderPath(folderPack.byId, folderId);
         const fileName = getFileName(d);
 
+        const topBadge = isTopDoc(d)
+          ? `<span class="chip" style="border-color:rgba(0,160,120,.25); background:rgba(0,160,120,.08)">🌐 TOP</span>`
+          : "";
+
         return `
           <div class="doc-card" data-id="${esc(id)}">
             <div class="doc-card__main">
               <div class="doc-card__title">${esc(getName(d))}</div>
               <div class="doc-card__sub">
+                ${topBadge}
                 <span class="chip chip-folder">📁 ${esc(folderPath)}</span>
                 <span class="chip chip-file">📄 ${esc(fileName)}</span>
               </div>
@@ -840,8 +865,9 @@
 
             if (act === "detail") return openDocModal(d);
 
+            const { downloadUrl, deleteUrl } = buildUrlsForDoc(d);
+
             if (act === "download") {
-              const downloadUrl = `${ENDPOINTS.documents}/${encodeURIComponent(id)}/download`;
               try {
                 const blob = await fetchBlobWithAuth(downloadUrl);
                 const downloadName = getDownloadName(d) || `document-${id}`;
@@ -863,7 +889,7 @@
             if (act === "trash") {
               if (!confirm("ยืนยันลบเอกสารนี้? (ย้ายไปถังขยะ)")) return;
               try {
-                await apiFetch(`${ENDPOINTS.documents}/${encodeURIComponent(id)}`, { method: "DELETE" });
+                await apiFetch(deleteUrl, { method: "DELETE" });
                 toast("ย้ายไปถังขยะแล้ว", "success");
                 window.dispatchEvent(new Event("force-render-route"));
               } catch (err) {
@@ -887,6 +913,7 @@
             String(getName(d)).toLowerCase().includes(kw) ||
             String(getFileName(d)).toLowerCase().includes(kw);
 
+          // TOP files ไม่มี folder_id ให้ผ่านเมื่อไม่ได้กรองแฟ้ม
           const hitFolder = !fid || String(getFolderId(d) ?? "") === String(fid);
           return hitKw && hitFolder;
         });

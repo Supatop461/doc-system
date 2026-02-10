@@ -1,3 +1,4 @@
+// src/services/documents.service.js
 import pool from "../db/pool.js";
 
 // helper: แปลงเป็น int แบบปลอดภัย (กัน NaN)
@@ -13,6 +14,7 @@ function toInt(value, fallback = null) {
 // ✅ cache columns ของตาราง documents เพื่อทำ SQL แบบ "ไม่พังของเก่า"
 let _docColsCache = null;
 let _docTitleCol = null;
+let _docPublicUrlCol = null;
 
 async function getDocumentsColumns() {
   if (_docColsCache) return _docColsCache;
@@ -25,9 +27,13 @@ async function getDocumentsColumns() {
 
   _docColsCache = new Set(rows.map((r) => r.column_name));
 
-  // เลือกชื่อคอลัมน์ title ที่เป็นไปได้ (คุณจะใช้ชื่อไหนก็ได้)
+  // เลือกชื่อคอลัมน์ title ที่เป็นไปได้
   const candidates = ["title", "document_title", "doc_title", "document_name", "name"];
   _docTitleCol = candidates.find((c) => _docColsCache.has(c)) || null;
+
+  // ✅ public url column
+  const pubCandidates = ["public_url", "public_path", "public_link"];
+  _docPublicUrlCol = pubCandidates.find((c) => _docColsCache.has(c)) || null;
 
   return _docColsCache;
 }
@@ -35,16 +41,20 @@ async function getDocumentsColumns() {
 async function getTitleSelectFragment() {
   await getDocumentsColumns();
   if (_docTitleCol) return `d.${_docTitleCol} AS title,`;
-  // ถ้าไม่มีคอลัมน์ title ใน DB ให้ส่ง title เป็น null (กัน frontend งง)
   return `NULL AS title,`;
+}
+
+async function getPublicUrlSelectFragment() {
+  await getDocumentsColumns();
+  if (_docPublicUrlCol) return `d.${_docPublicUrlCol} AS public_url,`;
+  return `NULL AS public_url,`;
 }
 
 async function getTitleInsertColsAndParams(values) {
   await getDocumentsColumns();
   if (!_docTitleCol) return { cols: "", vals: "", added: false };
 
-  // เพิ่มคอลัมน์ title เข้า insert แบบ dynamic
-  values.push(null); // placeholder ก่อน เดี๋ยว setter จะ set จริง
+  values.push(null);
   const idx = values.length;
   return {
     cols: `, ${_docTitleCol}`,
@@ -54,21 +64,30 @@ async function getTitleInsertColsAndParams(values) {
   };
 }
 
+async function getPublicUrlInsertColsAndParams(values) {
+  await getDocumentsColumns();
+  if (!_docPublicUrlCol) return { added: false, idx: null };
+
+  values.push(null);
+  const idx = values.length;
+  return { added: true, idx };
+}
+
 /**
  * ใช้กับ GET /api/documents?folder_id=...  (ขั้นต่ำ STEP 9)
- * - ดึงเฉพาะในแฟ้ม
- * - ไม่รวมที่ถูกลบ (deleted_at IS NULL)
  */
 export async function listDocumentsByFolder(folderId, { limit = 100, offset = 0 } = {}) {
   const folder_id = toInt(folderId, null);
   if (folder_id === null) return [];
 
   const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
 
   const sql = `
     SELECT
       d.document_id,
       ${titleFrag}
+      ${pubFrag}
       d.original_file_name,
       d.stored_file_name,
       d.file_path,
@@ -76,7 +95,6 @@ export async function listDocumentsByFolder(folderId, { limit = 100, offset = 0 
       d.mime_type,
       d.folder_id,
 
-      -- ✅ NEW: ให้ list เห็นค่าที่บันทึกจาก settings
       d.document_type_id,
       d.it_job_type_id,
 
@@ -97,13 +115,11 @@ export async function listDocumentsByFolder(folderId, { limit = 100, offset = 0 
 
 /**
  * listDocuments: ของเดิมคุณ (รองรับค้นหา q + folderId + paging)
- * ปรับ: กัน NaN ของ folderId / limit / offset ให้ปลอดภัยขึ้น
  */
 export async function listDocuments({ q, folderId, limit = 20, offset = 0 }) {
   const values = [];
   const where = [];
 
-  // ✅ แสดงเฉพาะที่ไม่ถูกลบ
   where.push("d.deleted_at IS NULL");
 
   if (q) {
@@ -133,11 +149,13 @@ export async function listDocuments({ q, folderId, limit = 20, offset = 0 }) {
   const whereSql = where.length ? `WHERE ${where.join(" AND ")}` : "";
 
   const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
 
   const sql = `
     SELECT
       d.document_id,
       ${titleFrag}
+      ${pubFrag}
       d.original_file_name,
       d.stored_file_name,
       d.file_path,
@@ -145,7 +163,6 @@ export async function listDocuments({ q, folderId, limit = 20, offset = 0 }) {
       d.mime_type,
       d.folder_id,
 
-      -- ✅ NEW
       d.document_type_id,
       d.it_job_type_id,
 
@@ -165,11 +182,13 @@ export async function listDocuments({ q, folderId, limit = 20, offset = 0 }) {
 
 export async function listTrash({ limit = 20, offset = 0 }) {
   const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
 
   const sql = `
     SELECT
       d.document_id,
       ${titleFrag}
+      ${pubFrag}
       d.original_file_name,
       d.stored_file_name,
       d.file_path,
@@ -177,7 +196,6 @@ export async function listTrash({ limit = 20, offset = 0 }) {
       d.mime_type,
       d.folder_id,
 
-      -- ✅ NEW
       d.document_type_id,
       d.it_job_type_id,
 
@@ -199,11 +217,13 @@ export async function getDocumentById(documentId) {
   if (id === null) return null;
 
   const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
 
   const sql = `
     SELECT
       d.document_id,
       ${titleFrag}
+      ${pubFrag}
       d.original_file_name,
       d.stored_file_name,
       d.file_path,
@@ -211,7 +231,6 @@ export async function getDocumentById(documentId) {
       d.mime_type,
       d.folder_id,
 
-      -- ✅ NEW
       d.document_type_id,
       d.it_job_type_id,
 
@@ -227,9 +246,79 @@ export async function getDocumentById(documentId) {
   return rows[0] || null;
 }
 
+// =========================
+// ✅ NEW: lookup by public_url / stored_file_name (ใช้สำหรับ sync TOP→DB)
+// =========================
+export async function getDocumentByPublicUrl(publicUrl) {
+  await getDocumentsColumns();
+  if (!_docPublicUrlCol) return null;
+
+  const v = String(publicUrl || "").trim();
+  if (!v) return null;
+
+  const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
+
+  const sql = `
+    SELECT
+      d.document_id,
+      ${titleFrag}
+      ${pubFrag}
+      d.original_file_name,
+      d.stored_file_name,
+      d.file_path,
+      d.file_size,
+      d.mime_type,
+      d.folder_id,
+      d.document_type_id,
+      d.it_job_type_id,
+      d.created_by,
+      d.created_at,
+      d.deleted_at,
+      d.deleted_by
+    FROM documents d
+    WHERE d.${_docPublicUrlCol} = $1
+    LIMIT 1;
+  `;
+  const { rows } = await pool.query(sql, [v]);
+  return rows[0] || null;
+}
+
+export async function getDocumentByStoredFileName(storedFileName) {
+  const v = String(storedFileName || "").trim();
+  if (!v) return null;
+
+  const titleFrag = await getTitleSelectFragment();
+  const pubFrag = await getPublicUrlSelectFragment();
+
+  const sql = `
+    SELECT
+      d.document_id,
+      ${titleFrag}
+      ${pubFrag}
+      d.original_file_name,
+      d.stored_file_name,
+      d.file_path,
+      d.file_size,
+      d.mime_type,
+      d.folder_id,
+      d.document_type_id,
+      d.it_job_type_id,
+      d.created_by,
+      d.created_at,
+      d.deleted_at,
+      d.deleted_by
+    FROM documents d
+    WHERE d.stored_file_name = $1
+    LIMIT 1;
+  `;
+  const { rows } = await pool.query(sql, [v]);
+  return rows[0] || null;
+}
+
 export async function createDocument({
-  // ✅ NEW (optional): ชื่อเอกสารที่แก้ได้
   title,
+  public_url, // ✅ NEW
 
   original_file_name,
   stored_file_name,
@@ -237,21 +326,25 @@ export async function createDocument({
   file_size,
   mime_type,
   folder_id,
-  document_type_id, // ✅ NEW
-  it_job_type_id,   // ✅ NEW
+  document_type_id,
+  it_job_type_id,
   created_by,
 }) {
   const values = [];
 
-  // เตรียม insert title แบบ dynamic (ถ้ามีคอลัมน์จริงใน DB)
+  // เตรียม insert title แบบ dynamic
   const titleInsert = await getTitleInsertColsAndParams(values);
-
-  // ใส่ค่าจริงของ title ถ้าใช้ได้
   if (titleInsert.added) {
-    values[titleInsert.idx - 1] = (String(title ?? "").trim() || null);
+    values[titleInsert.idx - 1] = String(title ?? "").trim() || null;
   }
 
-  // ต่อด้วยฟิลด์เดิมทั้งหมด (กันพัง)
+  // เตรียม insert public_url แบบ dynamic
+  const pubInsert = await getPublicUrlInsertColsAndParams(values);
+  if (pubInsert.added) {
+    values[pubInsert.idx - 1] = String(public_url ?? "").trim() || null;
+  }
+
+  // ต่อด้วยฟิลด์เดิมทั้งหมด
   values.push(original_file_name);
   values.push(stored_file_name);
   values.push(file_path);
@@ -262,26 +355,39 @@ export async function createDocument({
   values.push(toInt(it_job_type_id, null));
   values.push(created_by);
 
-  // ตำแหน่งพารามิเตอร์ (ถ้ามี title จะเลื่อนไป +1)
-  const base = titleInsert.added ? 1 : 0;
-  const p1 = 1 + base;
-  const p2 = 2 + base;
-  const p3 = 3 + base;
-  const p4 = 4 + base;
-  const p5 = 5 + base;
-  const p6 = 6 + base;
-  const p7 = 7 + base;
-  const p8 = 8 + base;
-  const p9 = 9 + base;
+  // จำนวน dynamic ที่เพิ่มหน้า field เดิม
+  const dynCount = (titleInsert.added ? 1 : 0) + (pubInsert.added ? 1 : 0);
 
-  const titleReturnFrag = (await (async () => {
-    await getDocumentsColumns();
-    return _docTitleCol ? `${_docTitleCol} AS title,` : `NULL AS title,`;
-  })());
+  // ตำแหน่งพารามิเตอร์ของ field เดิม
+  const p1 = 1 + dynCount;
+  const p2 = 2 + dynCount;
+  const p3 = 3 + dynCount;
+  const p4 = 4 + dynCount;
+  const p5 = 5 + dynCount;
+  const p6 = 6 + dynCount;
+  const p7 = 7 + dynCount;
+  const p8 = 8 + dynCount;
+  const p9 = 9 + dynCount;
+
+  await getDocumentsColumns();
+
+  const titleReturnFrag = _docTitleCol ? `${_docTitleCol} AS title,` : `NULL AS title,`;
+  const pubReturnFrag = _docPublicUrlCol ? `${_docPublicUrlCol} AS public_url,` : `NULL AS public_url,`;
+
+  // สร้างส่วนคอลัมน์ dynamic ใน INSERT
+  const dynCols = []
+    .concat(titleInsert.added ? [_docTitleCol] : [])
+    .concat(pubInsert.added ? [_docPublicUrlCol] : [])
+    .filter(Boolean);
+
+  const dynVals = [];
+  // หมายเหตุ: เรา push values ตามลำดับ: title(ถ้ามี) -> public_url(ถ้ามี) -> fields เดิม
+  if (titleInsert.added) dynVals.push(`$1`);
+  if (pubInsert.added) dynVals.push(`$${titleInsert.added ? 2 : 1}`);
 
   const sql = `
     INSERT INTO documents (
-      ${titleInsert.added ? `${_docTitleCol},` : ""}
+      ${dynCols.length ? `${dynCols.join(", ")},` : ""}
       original_file_name,
       stored_file_name,
       file_path,
@@ -293,12 +399,13 @@ export async function createDocument({
       created_by
     )
     VALUES (
-      ${titleInsert.added ? `$1,` : ""}
+      ${dynVals.length ? `${dynVals.join(", ")},` : ""}
       $${p1}, $${p2}, $${p3}, $${p4}, $${p5}, $${p6}, $${p7}, $${p8}, $${p9}
     )
     RETURNING
       document_id,
       ${titleReturnFrag}
+      ${pubReturnFrag}
       original_file_name,
       stored_file_name,
       file_path,
@@ -356,12 +463,8 @@ export async function renameDocumentTitle({ id, title }) {
   const docId = Number(id);
   if (!Number.isInteger(docId)) return null;
 
-  // ตรวจว่ามีคอลัมน์ title จริง (คุณมีระบบ cache อยู่แล้ว)
   await getDocumentsColumns();
-  if (!_docTitleCol) {
-    // ไม่มีคอลัมน์ title ใน DB
-    return null;
-  }
+  if (!_docTitleCol) return null;
 
   const sql = `
     UPDATE documents
@@ -384,11 +487,7 @@ export async function renameDocumentTitle({ id, title }) {
       created_at;
   `;
 
-  const { rows, rowCount } = await pool.query(sql, [
-    String(title).trim(),
-    docId,
-  ]);
-
+  const { rows, rowCount } = await pool.query(sql, [String(title).trim(), docId]);
   if (!rowCount) return null;
   return rows[0];
 }

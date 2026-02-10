@@ -20,8 +20,16 @@ const ALLOWED_MIME = new Set([
   "image/jpeg",
 ]);
 
+// ✅ เก็บไฟล์ต้นทางแบบเดิม (ไม่พังของเก่า)
 const uploadDir = path.resolve(process.cwd(), "uploads");
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+// ✅ ปลายทาง public สำหรับ Apache/XAMPP
+const XAMPP_PUBLIC_DIR = "C:/xampp/htdocs/top";
+
+function ensureDir(p) {
+  if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
+}
 
 function safeUnlink(filePath) {
   if (!filePath) return;
@@ -44,7 +52,6 @@ function toInt(value) {
 function fixOriginalName(name = "") {
   try {
     const restored = Buffer.from(String(name), "latin1").toString("utf8");
-    // ถ้าแปลงแล้วเกิด � แปลว่าเดิมน่าจะถูกอยู่ → คืนค่าเดิม
     const bad = (restored.match(/�/g) || []).length;
     if (bad > 0) return String(name);
     return restored;
@@ -53,11 +60,17 @@ function fixOriginalName(name = "") {
   }
 }
 
+function copyToXampp(storedFileName, srcAbsPath) {
+  ensureDir(XAMPP_PUBLIC_DIR);
+  const destAbsPath = path.join(XAMPP_PUBLIC_DIR, storedFileName);
+  fs.copyFileSync(srcAbsPath, destAbsPath); // ✅ copy (ไม่พังของเดิม)
+  return destAbsPath;
+}
+
 // ========== multer config ==========
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadDir),
   filename: (req, file, cb) => {
-    // ✅ ใช้ชื่อที่ fix แล้วเป็นฐานก่อน sanitize
     const fixed = fixOriginalName(file.originalname);
     const base = path.basename(fixed);
 
@@ -96,13 +109,11 @@ export async function uploadDocument(req, res) {
     // ========= 2) parse body =========
     const folder_id = toInt(req.body?.folder_id);
 
-    // รองรับกรณี body ส่ง id มาเอง (optional)
     const body_document_type_id =
       toInt(req.body?.document_type_id) ?? toInt(req.body?.doc_type_id);
     const body_it_job_type_id =
       toInt(req.body?.it_job_type_id) ?? toInt(req.body?.it_work_id);
 
-    // ✅ มาตรฐานใหม่: req.user.id
     const created_by = req.user?.id ?? null;
 
     // ========= 3) validate required =========
@@ -120,7 +131,6 @@ export async function uploadDocument(req, res) {
     }
 
     // ========= 4) get folder meta (source of truth) =========
-    // ✅ ดึง document_type_id / it_job_type_id จากแฟ้ม
     const folderRes = await pool.query(
       `SELECT folder_id, document_type_id, it_job_type_id
        FROM folders
@@ -136,7 +146,6 @@ export async function uploadDocument(req, res) {
 
     const folder = folderRes.rows[0];
 
-    // ถ้า body ส่งมาก็ใช้ได้ (แต่โดย UI คุณล็อกไม่ให้แก้แล้ว)
     const document_type_id =
       body_document_type_id ?? toInt(folder?.document_type_id);
     const it_job_type_id = body_it_job_type_id ?? toInt(folder?.it_job_type_id);
@@ -166,7 +175,9 @@ export async function uploadDocument(req, res) {
     );
     if (checkDocType.rowCount === 0) {
       safeUnlink(req.file?.path);
-      return res.status(404).json({ ok: false, message: "document type not found" });
+      return res
+        .status(404)
+        .json({ ok: false, message: "document type not found" });
     }
 
     const checkJobType = await pool.query(
@@ -178,15 +189,27 @@ export async function uploadDocument(req, res) {
       return res.status(404).json({ ok: false, message: "it job type not found" });
     }
 
-    // ========= 6) create document =========
+    // ========= 6) prepare meta =========
     const fixedOriginal = fixOriginalName(req.file.originalname);
-
-    // ✅ title เอาจาก frontend ได้ / ถ้าไม่ส่งมา ใช้ชื่อไฟล์ที่แก้ encoding แล้ว
     const title = String(req.body?.title ?? "").trim() || fixedOriginal;
 
+    // ========= 7) copy file to XAMPP =========
+    // ✅ copy หลัง multer เขียนลง uploads แล้ว
+    let public_url = null;
+    try {
+      copyToXampp(req.file.filename, req.file.path);
+      public_url = `/top/${req.file.filename}`;
+    } catch (e) {
+      console.warn("⚠️ copy to XAMPP failed:", e?.message);
+      // ไม่ล้ม upload ทั้งก้อน เพื่อไม่พัง flow เดิม
+      public_url = null;
+    }
+
+    // ========= 8) create document in DB =========
     const doc = await createDocument({
       title,
-      original_file_name: fixedOriginal, // ✅ สำคัญ: บันทึกชื่อไทยที่ถูกต้องลง DB
+      public_url, // ✅ NEW
+      original_file_name: fixedOriginal,
       stored_file_name: req.file.filename,
       file_path: req.file.path,
       file_size: req.file.size,
@@ -197,7 +220,10 @@ export async function uploadDocument(req, res) {
       created_by,
     });
 
-    return res.status(201).json({ ok: true, document: doc });
+    return res.status(201).json({
+      ok: true,
+      document: doc,
+    });
   } catch (err) {
     if (err?.code === "LIMIT_FILE_SIZE") {
       safeUnlink(req.file?.path);
