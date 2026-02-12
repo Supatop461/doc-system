@@ -13,9 +13,9 @@ import dashboardRoutes from "./routes/dashboard.routes.js";
 import settingsRouter from "./routes/settings.routes.js";
 import usersRouter from "./routes/users.routes.js";
 
-// ❌ แนะนำ “ปิดก่อน” กันชน route/ชื่อ endpoint สับสน
-// import documentTypesRouter from "./routes/documentTypes.routes.js";
-// import itJobTypesRouter from "./routes/itJobTypes.routes.js";
+// ✅ เปิดกลับ: ให้ตรงกับที่ frontend เรียก (/api/document-types, /api/it-job-types)
+import documentTypesRouter from "./routes/documentTypes.routes.js";
+import itJobTypesRouter from "./routes/itJobTypes.routes.js";
 
 import { startTrashPurgeJob } from "./jobs/trashPurge.job.js";
 import { authRequired } from "./middlewares/auth.js";
@@ -54,15 +54,15 @@ app.use("/api/folders", foldersRouter);
 app.use("/api/documents", documentsRouter);
 app.use("/api/trash", trashRouter);
 
+// ✅ ✅ เพิ่ม 2 เส้นนี้ (แก้ 404 ให้ dropdown ดึงได้)
+app.use("/api/document-types", documentTypesRouter);
+app.use("/api/it-job-types", itJobTypesRouter);
+
 // ✅ ✅ สำคัญ: ให้ตรงกับที่ frontend เรียก
 // จะได้เป็น /api/settings/document-types และ /api/settings/it-job-types
 app.use("/api/settings", settingsRouter);
 
 app.use("/api/users", usersRouter);
-
-// ❌ ถ้าจะเปิดใช้ router แยก ต้อง “ตั้ง endpoint ให้ชัด” ไม่ให้ชน/สับสนกับ settings
-// app.use("/api/document-types", documentTypesRouter);
-// app.use("/api/it-job-types", itJobTypesRouter);
 
 // ✅ me
 app.get("/api/me", authRequired, (req, res) => {

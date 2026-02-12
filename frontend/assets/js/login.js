@@ -109,6 +109,28 @@
   }
 
   // =========================
+// Password Toggle
+// =========================
+const pwToggle = document.getElementById("pwToggle");
+const passwordInput = document.getElementById("password");
+
+if (pwToggle && passwordInput) {
+  pwToggle.addEventListener("click", () => {
+    const isHidden = passwordInput.type === "password";
+
+    // สลับ type
+    passwordInput.type = isHidden ? "text" : "password";
+
+    // สลับไอคอน
+    const icon = pwToggle.querySelector(".pw-ico");
+    if (icon) {
+      icon.classList.toggle("pw-eye", !isHidden);
+      icon.classList.toggle("pw-eyeoff", isHidden);
+    }
+  });
+}
+
+  // =========================
   // Login handler
   // =========================
   async function handleLogin(username, password) {

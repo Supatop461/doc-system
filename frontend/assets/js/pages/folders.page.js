@@ -303,12 +303,11 @@ const ensureLookups = async () => {
   if (docTypes.length && itJobs.length) return;
 
   try {
-    // ✅ ใช้ path จริงจาก backend
-    const [a, b] = await Promise.all([
-      apiFetch("/api/settings/document-types"),
-      apiFetch("/api/settings/it-job-types"),
+  
+      const [a, b] = await Promise.all([
+      apiFetch(ENDPOINTS.documentTypes),
+      apiFetch(ENDPOINTS.itJobTypes),
     ]);
-
     docTypes = parseItems(a);
     itJobs = parseItems(b);
 

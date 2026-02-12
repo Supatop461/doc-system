@@ -42,25 +42,10 @@
 
     const tone =
       type === "success"
-        ? {
-            bg: "rgba(34,197,94,.14)",
-            bd: "rgba(34,197,94,.22)",
-            fg: "rgba(22,101,52,.95)",
-            icon: "✅",
-          }
+        ? { bg: "rgba(34,197,94,.14)", bd: "rgba(34,197,94,.22)", fg: "rgba(22,101,52,.95)", icon: "✅" }
         : type === "error"
-        ? {
-            bg: "rgba(239,68,68,.12)",
-            bd: "rgba(239,68,68,.22)",
-            fg: "rgba(153,27,27,.95)",
-            icon: "⚠️",
-          }
-        : {
-            bg: "rgba(232,62,140,.12)",
-            bd: "rgba(232,62,140,.22)",
-            fg: "rgba(75,0,48,.95)",
-            icon: "ℹ️",
-          };
+        ? { bg: "rgba(239,68,68,.12)", bd: "rgba(239,68,68,.22)", fg: "rgba(153,27,27,.95)", icon: "⚠️" }
+        : { bg: "rgba(232,62,140,.12)", bd: "rgba(232,62,140,.22)", fg: "rgba(75,0,48,.95)", icon: "ℹ️" };
 
     const el = document.createElement("div");
     el.style.cssText = `
@@ -84,7 +69,11 @@
         </div>
         <div style="flex:1;">
           <div style="font-weight:1000; line-height:1.1;">${esc(title)}</div>
-          ${message ? `<div style="margin-top:4px; color:rgba(75,0,48,.72); font-weight:700;">${esc(message)}</div>` : ""}
+          ${
+            message
+              ? `<div style="margin-top:4px; color:rgba(75,0,48,.72); font-weight:700;">${esc(message)}</div>`
+              : ""
+          }
         </div>
         <button type="button" aria-label="Close" style="
           border:1px solid ${tone.bd}; background:#fff; color:${tone.fg};
@@ -151,6 +140,15 @@
     .st-table thead th{font-size:12px;font-weight:950;color:rgba(75,0,48,.7);background:rgba(120,0,70,.03);}
     .st-muted{color:rgba(75,0,48,.55);}
 
+    .st-pill{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:999px;
+      font-weight:950;font-size:12px;
+      border:1px solid rgba(120,0,70,.12);
+      background:rgba(255,255,255,.7);
+      box-shadow:0 10px 22px rgba(120,0,70,.06);
+    }
+
     /* modal */
     .st-modal-overlay{
       position:fixed;inset:0;z-index:9999;
@@ -160,7 +158,7 @@
       padding:18px;
     }
     .st-modal{
-      width:min(720px, 100%);
+      width:min(820px, 100%);
       border-radius:22px;
       background:rgba(255,255,255,.98);
       border:1px solid rgba(255,255,255,.55);
@@ -172,6 +170,10 @@
       padding:16px 16px 12px;
       background:linear-gradient(180deg, rgba(232,62,140,.12), rgba(255,255,255,.0));
       border-bottom:1px solid rgba(120,0,70,.10);
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      backdrop-filter: blur(6px);
     }
     .st-modal-title{font-weight:1000;font-size:16px;color:rgba(75,0,48,.95);}
     .st-modal-sub{margin-top:3px;color:rgba(75,0,48,.55);font-size:12px;}
@@ -183,11 +185,107 @@
       box-shadow:0 10px 22px rgba(120,0,70,.06);
       font-weight:1000;
     }
-    .st-modal-body{padding:16px;}
+    .st-modal-body{
+      padding:16px;
+      max-height:min(72vh, 680px);
+      overflow:auto;
+    }
     .st-field{margin-top:12px;}
     .st-label{display:block;font-weight:950;font-size:12px;color:rgba(75,0,48,.7);margin-bottom:6px;}
     .st-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;}
     .st-footnote{margin-top:10px;color:rgba(75,0,48,.55);font-size:12px;}
+
+    /* ==== Trash list (premium) ==== */
+    .st-trash-grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:12px;
+    }
+    @media (min-width: 900px){
+      .st-trash-grid{ grid-template-columns: 1fr 1fr; }
+    }
+    .st-trash-card{
+      border:1px solid rgba(120,0,70,.12);
+      background:rgba(255,255,255,.92);
+      border-radius:18px;
+      box-shadow:0 14px 34px rgba(120,0,70,.08);
+      overflow:hidden;
+    }
+    .st-trash-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:12px 14px;
+      background:linear-gradient(180deg, rgba(232,62,140,.12), rgba(255,255,255,0));
+      border-bottom:1px solid rgba(120,0,70,.10);
+    }
+    .st-trash-title{
+      font-weight:1000;
+      color:rgba(75,0,48,.95);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+    .st-trash-count{
+      font-weight:950;
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid rgba(120,0,70,.12);
+      background:rgba(255,255,255,.65);
+      color:rgba(75,0,48,.75);
+    }
+    .st-trash-list{
+      padding:10px 12px 12px;
+    }
+    .st-trash-item{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:10px 10px;
+      border:1px solid rgba(120,0,70,.08);
+      border-radius:16px;
+      background:#fff;
+      box-shadow:0 10px 22px rgba(120,0,70,.05);
+      margin-top:10px;
+    }
+    .st-trash-item:first-child{ margin-top:0; }
+    .st-trash-name{
+      font-weight:1000;
+      color:rgba(75,0,48,.95);
+      line-height:1.15;
+      word-break: break-word;
+    }
+    .st-trash-meta{
+      margin-top:4px;
+      font-size:12px;
+      font-weight:800;
+      color:rgba(75,0,48,.55);
+    }
+    .st-restore{
+      border-radius:14px;
+      padding:10px 12px;
+      font-weight:1000;
+      border:1px solid rgba(232,62,140,.25);
+      background:linear-gradient(180deg, #ef4a97, #e83e8c);
+      color:#fff;
+      cursor:pointer;
+      box-shadow:0 14px 30px rgba(232,62,140,.18);
+      transition:.15s transform, .15s box-shadow;
+      white-space:nowrap;
+    }
+    .st-restore:hover{ transform:translateY(-1px); box-shadow:0 18px 38px rgba(232,62,140,.22); }
+    .st-restore:active{ transform:translateY(0px); box-shadow:0 10px 22px rgba(232,62,140,.16); }
+    .st-trash-empty{
+      padding:14px 12px;
+      border:1px dashed rgba(120,0,70,.18);
+      border-radius:16px;
+      color:rgba(75,0,48,.55);
+      font-weight:900;
+      background:rgba(120,0,70,.03);
+    }
   `;
 
   function ensureCss() {
@@ -209,15 +307,14 @@
         background:${on ? "rgba(34,197,94,.12)" : "rgba(239,68,68,.10)"};
         color:${on ? "rgba(22,101,52,.95)" : "rgba(153,27,27,.95)"};
       ">
-        <span style="width:8px;height:8px;border-radius:50%;background:${on ? "rgba(34,197,94,.95)" : "rgba(239,68,68,.95)"}"></span>
+        <span style="width:8px;height:8px;border-radius:50%;background:${
+          on ? "rgba(34,197,94,.95)" : "rgba(239,68,68,.95)"
+        }"></span>
         ${on ? "ใช้งาน" : "ปิด"}
       </span>
     `;
   }
 
-  // =========================
-  // Modal helper
-  // =========================
   function openModal({ title, subtitle, bodyHtml, onMount }) {
     document.getElementById("stModalOverlay")?.remove();
 
@@ -243,6 +340,7 @@
     overlay.addEventListener("click", (e) => {
       if (e.target === overlay) close();
     });
+
     document.addEventListener(
       "keydown",
       function escClose(ev) {
@@ -258,20 +356,21 @@
     document.getElementById("stModalClose")?.addEventListener("click", close);
 
     try {
-      onMount?.({ close, overlay });
-    } catch {}
+      onMount?.({ close });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
-  function setBusy(btn, busy, textWhileBusy) {
+  function setBusy(btn, busy, text) {
     if (!btn) return;
     btn.disabled = !!busy;
     if (busy) {
-      btn.dataset._oldText = btn.textContent;
-      btn.textContent = textWhileBusy || "กำลังทำงาน...";
-    } else {
-      const t = btn.dataset._oldText;
-      if (t) btn.textContent = t;
-      delete btn.dataset._oldText;
+      btn.dataset._old = btn.textContent;
+      btn.textContent = text || "กำลังทำงาน...";
+    } else if (btn.dataset._old) {
+      btn.textContent = btn.dataset._old;
+      delete btn.dataset._old;
     }
   }
 
@@ -279,33 +378,44 @@
   // Page
   // =========================
   window.pages.settings = {
-    async load({ $, setUpdatedNow }) {
+    async load({ ENDPOINTS, apiFetch, $, setUpdatedNow }) {
       ensureCss();
 
       const leftBody = $("leftBody");
       const leftBadge = $("leftBadge");
-
       if (leftBadge) leftBadge.textContent = "ตั้งค่า";
       if (!leftBody) return;
 
-      if (!window.api?.settings?.documentTypes || !window.api?.settings?.itJobTypes) {
-        throw new Error("API settings ยังไม่ถูกผูก (window.api.settings.*) — เช็ก api.js");
-      }
-
-      // ---- state (ไม่รีโหลดทั้งหน้า) ----
-      const state = {
-        docTypes: [],
-        jobTypes: [],
+      // ✅ ไม่พึ่ง window.api.settings (กัน query param ไม่ถูกส่ง)
+      const api = {
+        doc: {
+          list: (qs) => apiFetch(`${ENDPOINTS.settings}/document-types${qs || ""}`),
+          create: (body) => apiFetch(`${ENDPOINTS.settings}/document-types`, { method: "POST", body }),
+          update: (id, body) =>
+            apiFetch(`${ENDPOINTS.settings}/document-types/${id}`, { method: "PUT", body }),
+          remove: (id) => apiFetch(`${ENDPOINTS.settings}/document-types/${id}`, { method: "DELETE" }),
+        },
+        job: {
+          list: (qs) => apiFetch(`${ENDPOINTS.settings}/it-job-types${qs || ""}`),
+          create: (body) => apiFetch(`${ENDPOINTS.settings}/it-job-types`, { method: "POST", body }),
+          update: (id, body) => apiFetch(`${ENDPOINTS.settings}/it-job-types/${id}`, { method: "PUT", body }),
+          remove: (id) => apiFetch(`${ENDPOINTS.settings}/it-job-types/${id}`, { method: "DELETE" }),
+        },
       };
+
+      const state = { docAll: [], jobAll: [] };
 
       const loadAll = async () => {
-        const [docTypesRes, jobTypesRes] = await Promise.all([
-          window.api.settings.documentTypes.list({ include_inactive: true }),
-          window.api.settings.itJobTypes.list({ include_inactive: true }),
-        ]);
-        state.docTypes = docTypesRes?.data || [];
-        state.jobTypes = jobTypesRes?.data || [];
+        // ✅ ดึง “ทั้งหมด” รวมที่ถูกลบ
+        const qs = `?include_inactive=1&include_deleted=1`;
+        const [docRes, jobRes] = await Promise.all([api.doc.list(qs), api.job.list(qs)]);
+        state.docAll = docRes?.data || [];
+        state.jobAll = jobRes?.data || [];
+        setUpdatedNow?.();
       };
+
+      const activeOnly = (arr) => (arr || []).filter((x) => !x?.deleted_at);
+      const deletedOnly = (arr) => (arr || []).filter((x) => !!x?.deleted_at);
 
       const renderTable = (kind, items) => {
         const isDoc = kind === "doc";
@@ -322,9 +432,7 @@
                 <td>${pill(!!x?.is_active)}</td>
                 <td class="st-muted">${esc(fmtTime(x?.updated_at || x?.created_at))}</td>
                 <td style="text-align:right;">
-                  <button class="st-btn" data-kind="${isDoc ? "doc" : "job"}" data-id="${esc(
-              idVal
-            )}" type="button">⚙️ จัดการ</button>
+                  <button class="st-btn" data-kind="${kind}" data-id="${esc(idVal)}" type="button">⚙️ จัดการ</button>
                 </td>
               </tr>
             `;
@@ -343,80 +451,96 @@
                 </tr>
               </thead>
               <tbody>
-                ${
-                  rows ||
-                  `<tr><td colspan="4" class="st-muted" style="padding:14px;">ยังไม่มีข้อมูล</td></tr>`
-                }
+                ${rows || `<tr><td colspan="4" class="st-muted" style="padding:14px;">ยังไม่มีข้อมูล</td></tr>`}
               </tbody>
             </table>
           </div>
         `;
       };
 
-      // re-render เฉพาะ content (ไม่ applyRoute)
-      const render = () => {
-        leftBody.innerHTML = `
-          <div class="st-card" style="padding:14px;margin-bottom:12px;">
-            <div class="st-title">ชนิดเอกสาร (Document Types)</div>
-           
+      // ✅ Trash modal: premium cards
+      const openTrashModal = () => {
+        const docTrash = deletedOnly(state.docAll);
+        const jobTrash = deletedOnly(state.jobAll);
 
-            <form id="formAddDoc" class="st-row" style="margin-top:12px;">
-              <input id="inpAddDoc" class="st-input" placeholder="เช่น ใบแจ้งซ่อม / รายงาน / คู่มือ..." />
-              <button id="btnAddDoc" type="submit" class="st-btn st-btn-primary">＋ เพิ่ม</button>
-            </form>
+        const renderTrashCard = (kind, title, items) => {
+          const isDoc = kind === "doc";
+          const idKey = isDoc ? "document_type_id" : "it_job_type_id";
 
-            <div id="tblDocWrap" style="margin-top:12px;">
-              ${renderTable("doc", state.docTypes)}
+          const rows = items
+            .slice()
+            .sort((a, b) => new Date(b?.deleted_at || 0) - new Date(a?.deleted_at || 0))
+            .map((x) => {
+              const idVal = x?.[idKey];
+              return `
+                <div class="st-trash-item">
+                  <div style="min-width:0;">
+                    <div class="st-trash-name">${esc(x?.name)}</div>
+                    <div class="st-trash-meta">ลบเมื่อ: ${esc(fmtTime(x?.deleted_at))}</div>
+                  </div>
+                  <button class="st-restore" data-restore-kind="${kind}" data-restore-id="${esc(idVal)}" type="button">
+                    ♻️ กู้คืน
+                  </button>
+                </div>
+              `;
+            })
+            .join("");
+
+          return `
+            <div class="st-trash-card">
+              <div class="st-trash-head">
+                <div class="st-trash-title">🗑️ ${esc(title)}</div>
+                <div class="st-trash-count">${items.length} รายการ</div>
+              </div>
+              <div class="st-trash-list">
+                ${rows || `<div class="st-trash-empty">ไม่มีรายการที่ถูกลบ</div>`}
+              </div>
             </div>
-          </div>
+          `;
+        };
 
-          <div class="st-card" style="padding:14px;">
-            <div class="st-title">ประเภทงาน IT (IT Job Types)</div>
-           
-
-            <form id="formAddJob" class="st-row" style="margin-top:12px;">
-              <input id="inpAddJob" class="st-input" placeholder="เช่น Network / System / Support..." />
-              <button id="btnAddJob" type="submit" class="st-btn st-btn-primary">＋ เพิ่ม</button>
-            </form>
-
-            <div id="tblJobWrap" style="margin-top:12px;">
-              ${renderTable("job", state.jobTypes)}
+        openModal({
+          title: "รายการที่ถูกลบ",
+          subtitle: "กด ♻️ เพื่อกู้คืนกลับมาใช้งาน",
+          bodyHtml: `
+            <div class="st-trash-grid">
+              ${renderTrashCard("doc", "ชนิดเอกสารที่ถูกลบ", docTrash)}
+              ${renderTrashCard("job", "งาน IT ที่ถูกลบ", jobTrash)}
             </div>
-          </div>
-        `;
+            <div class="st-footnote">
+              * การกู้คืน = ตั้งค่า deleted_at = NULL และ is_active = true
+            </div>
+          `,
+          onMount: ({ close }) => {
+            document.querySelectorAll("[data-restore-kind][data-restore-id]").forEach((btn) => {
+              btn.addEventListener("click", async () => {
+                const kind = btn.getAttribute("data-restore-kind");
+                const id = btn.getAttribute("data-restore-id");
+                try {
+                  setBusy(btn, true, "กำลังกู้คืน...");
+                  if (kind === "doc") await api.doc.update(id, { deleted_at: null, is_active: true });
+                  else await api.job.update(id, { deleted_at: null, is_active: true });
 
-        bindHandlers(); // bind ใหม่ทุกครั้งหลัง render
+                  await loadAll();
+                  render();
+                  toast({ type: "success", title: "กู้คืนแล้ว", message: "รายการถูกกู้คืนกลับมาใช้งาน" });
+                  close();
+                } catch (e) {
+                  toast({ type: "error", title: "กู้คืนไม่สำเร็จ", message: e?.message || String(e) });
+                } finally {
+                  setBusy(btn, false);
+                }
+              });
+            });
+          },
+        });
       };
 
-      const rerenderTablesOnly = () => {
-        const docWrap = leftBody.querySelector("#tblDocWrap");
-        const jobWrap = leftBody.querySelector("#tblJobWrap");
-        if (docWrap) docWrap.innerHTML = renderTable("doc", state.docTypes);
-        if (jobWrap) jobWrap.innerHTML = renderTable("job", state.jobTypes);
-        // ปุ่มจัดการอยู่ในตาราง ต้อง bind ใหม่
-        bindManageButtons();
-      };
-
-      const findItemByKind = (kind, id) => {
+      const findByKind = (kind, id) => {
         const isDoc = kind === "doc";
-        const items = isDoc ? state.docTypes : state.jobTypes;
-        const idKey = isDoc ? "document_type_id" : "it_job_type_id";
-        return items.find((x) => String(x?.[idKey]) === String(id));
-      };
-
-      const replaceItemByKind = (kind, newItem) => {
-        const isDoc = kind === "doc";
-        const idKey = isDoc ? "document_type_id" : "it_job_type_id";
-        const items = isDoc ? state.docTypes : state.jobTypes;
-        const idx = items.findIndex((x) => String(x?.[idKey]) === String(newItem?.[idKey]));
-        if (idx >= 0) items[idx] = newItem;
-      };
-
-      const removeItemByKind = (kind, id) => {
-        const isDoc = kind === "doc";
-        const idKey = isDoc ? "document_type_id" : "it_job_type_id";
-        if (isDoc) state.docTypes = state.docTypes.filter((x) => String(x?.[idKey]) !== String(id));
-        else state.jobTypes = state.jobTypes.filter((x) => String(x?.[idKey]) !== String(id));
+        const arr = isDoc ? state.docAll : state.jobAll;
+        const key = isDoc ? "document_type_id" : "it_job_type_id";
+        return arr.find((x) => String(x?.[key]) === String(id));
       };
 
       const bindManageButtons = () => {
@@ -424,10 +548,8 @@
           b.addEventListener("click", () => {
             const kind = b.getAttribute("data-kind");
             const id = b.getAttribute("data-id");
-
-            const item = findItemByKind(kind, id);
+            const item = findByKind(kind, id);
             if (!item) return toast({ type: "error", title: "ไม่พบข้อมูล", message: "รายการนี้อาจถูกลบไปแล้ว" });
-
             openManageModal(kind, item);
           });
         });
@@ -436,14 +558,8 @@
       const openManageModal = (kind, item) => {
         const isDoc = kind === "doc";
         const idKey = isDoc ? "document_type_id" : "it_job_type_id";
-        const apiObj = isDoc ? window.api.settings.documentTypes : window.api.settings.itJobTypes;
-
         const idVal = item?.[idKey];
         const activeVal = !!item?.is_active;
-
-        if (!idVal) {
-          return toast({ type: "error", title: "ทำรายการไม่ได้", message: "ไม่พบ ID ของรายการ" });
-        }
 
         openModal({
           title: isDoc ? "จัดการชนิดเอกสาร" : "จัดการประเภทงาน IT",
@@ -470,7 +586,7 @@
             </div>
 
             <div class="st-footnote">
-              * ลบ = soft delete (ซ่อนรายการ) ไม่ทำให้ระบบพัง
+              * ลบ = ส่งไปถังขยะ (deleted_at) และสามารถกู้คืนได้
             </div>
           `,
           onMount: ({ close }) => {
@@ -483,11 +599,11 @@
                 if (!name) return toast({ type: "error", title: "กรอกชื่อก่อน", message: "กรุณากรอกชื่อให้ครบ" });
 
                 setBusy(btn, true, "กำลังบันทึก...");
-                const res = await apiObj.update(idVal, { name });
-                const updated = res?.data || { ...item, name };
+                if (isDoc) await api.doc.update(idVal, { name });
+                else await api.job.update(idVal, { name });
 
-                replaceItemByKind(kind, updated);
-                rerenderTablesOnly();
+                await loadAll();
+                render();
 
                 toast({ type: "success", title: "บันทึกแล้ว", message: `แก้ไขชื่อเป็น “${name}”` });
                 close();
@@ -502,11 +618,11 @@
               const btn = $id("stToggle");
               try {
                 setBusy(btn, true, "กำลังอัปเดต...");
-                const res = await apiObj.update(idVal, { is_active: !activeVal });
-                const updated = res?.data || { ...item, is_active: !activeVal };
+                if (isDoc) await api.doc.update(idVal, { is_active: !activeVal });
+                else await api.job.update(idVal, { is_active: !activeVal });
 
-                replaceItemByKind(kind, updated);
-                rerenderTablesOnly();
+                await loadAll();
+                render();
 
                 toast({
                   type: "success",
@@ -524,16 +640,16 @@
             $id("stDelete")?.addEventListener("click", async () => {
               const btn = $id("stDelete");
               try {
-                if (!confirm("ยืนยันลบรายการนี้? (soft delete)")) return;
+                if (!confirm("ยืนยันลบ? (จะไปอยู่ถังขยะและกู้คืนได้)")) return;
 
                 setBusy(btn, true, "กำลังลบ...");
-                await apiObj.remove(idVal);
+                if (isDoc) await api.doc.remove(idVal);
+                else await api.job.remove(idVal);
 
-                // ✅ ลบแล้วหายจากตารางทันที
-                removeItemByKind(kind, idVal);
-                rerenderTablesOnly();
+                await loadAll();
+                render();
 
-                toast({ type: "success", title: "ลบแล้ว", message: "รายการถูกนำออกจากตาราง" });
+                toast({ type: "success", title: "ลบแล้ว", message: "รายการถูกย้ายไปถังขยะ" });
                 close();
               } catch (e) {
                 toast({ type: "error", title: "ลบไม่สำเร็จ", message: e?.message || String(e) });
@@ -541,76 +657,94 @@
                 setBusy(btn, false);
               }
             });
-
-            setTimeout(() => $id("stName")?.focus(), 0);
           },
         });
       };
 
-      const bindHandlers = () => {
-        // Add doc type
+      const render = () => {
+        const docActive = activeOnly(state.docAll);
+        const jobActive = activeOnly(state.jobAll);
+        const docTrash = deletedOnly(state.docAll);
+        const jobTrash = deletedOnly(state.jobAll);
+
+        leftBody.innerHTML = `
+          <div class="st-card" style="padding:14px;margin-bottom:12px;">
+            <div class="st-title">ชนิดเอกสาร (Document Types)</div>
+
+            <div class="st-row" style="margin-top:10px;">
+              <span class="st-pill">ใช้งาน: ${docActive.length} • ถูกลบ: ${docTrash.length}</span>
+              <button id="btnDocTrash" class="st-btn" type="button">🗑️ ดูที่ถูกลบ</button>
+            </div>
+
+            <form id="formAddDoc" class="st-row" style="margin-top:12px;">
+              <input id="inpAddDoc" class="st-input" placeholder="เช่น ใบแจ้งซ่อม / รายงาน / คู่มือ..." />
+              <button id="btnAddDoc" type="submit" class="st-btn st-btn-primary">＋ เพิ่ม</button>
+            </form>
+
+            <div id="tblDocWrap" style="margin-top:12px;">
+              ${renderTable("doc", docActive)}
+            </div>
+          </div>
+
+          <div class="st-card" style="padding:14px;">
+            <div class="st-title">ประเภทงาน IT (IT Job Types)</div>
+
+            <div class="st-row" style="margin-top:10px;">
+              <span class="st-pill">ใช้งาน: ${jobActive.length} • ถูกลบ: ${jobTrash.length}</span>
+              <button id="btnJobTrash" class="st-btn" type="button">🗑️ ดูที่ถูกลบ</button>
+            </div>
+
+            <form id="formAddJob" class="st-row" style="margin-top:12px;">
+              <input id="inpAddJob" class="st-input" placeholder="เช่น Network / System / Support..." />
+              <button id="btnAddJob" type="submit" class="st-btn st-btn-primary">＋ เพิ่ม</button>
+            </form>
+
+            <div id="tblJobWrap" style="margin-top:12px;">
+              ${renderTable("job", jobActive)}
+            </div>
+          </div>
+        `;
+
+        leftBody.querySelector("#btnDocTrash")?.addEventListener("click", openTrashModal);
+        leftBody.querySelector("#btnJobTrash")?.addEventListener("click", openTrashModal);
+
         leftBody.querySelector("#formAddDoc")?.addEventListener("submit", async (e) => {
           e.preventDefault();
-          const btn = leftBody.querySelector("#btnAddDoc");
           const inp = leftBody.querySelector("#inpAddDoc");
+          const btn = leftBody.querySelector("#btnAddDoc");
+          const name = (inp?.value || "").trim();
+          if (!name) return toast({ type: "error", title: "กรอกชื่อก่อน", message: "กรุณากรอกชื่อชนิดเอกสาร" });
 
           try {
-            const name = (inp?.value || "").trim();
-            if (!name) return toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: "กรุณากรอกชื่อชนิดเอกสาร" });
-
             setBusy(btn, true, "กำลังเพิ่ม...");
-            const res = await window.api.settings.documentTypes.create({ name, is_active: true });
-            const created = res?.data;
-
-            // ✅ เพิ่มแล้วลงตารางทันที
-            if (created) state.docTypes.push(created);
-            else state.docTypes.push({ document_type_id: Date.now(), name, is_active: true, updated_at: new Date().toISOString() });
-
-            rerenderTablesOnly();
-
-            // ✅ เคลียร์ input + focus
-            if (inp) {
-              inp.value = "";
-              inp.focus();
-            }
-
-            toast({ type: "success", title: "เพิ่มแล้ว", message: `ชนิดเอกสาร “${name}”` });
-          } catch (e2) {
-            toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: e2?.message || String(e2) });
+            await api.doc.create({ name, is_active: true });
+            inp.value = "";
+            await loadAll();
+            render();
+            toast({ type: "success", title: "เพิ่มแล้ว", message: name });
+          } catch (err) {
+            toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: err?.message || String(err) });
           } finally {
             setBusy(btn, false);
           }
         });
 
-        // Add job type
         leftBody.querySelector("#formAddJob")?.addEventListener("submit", async (e) => {
           e.preventDefault();
-          const btn = leftBody.querySelector("#btnAddJob");
           const inp = leftBody.querySelector("#inpAddJob");
+          const btn = leftBody.querySelector("#btnAddJob");
+          const name = (inp?.value || "").trim();
+          if (!name) return toast({ type: "error", title: "กรอกชื่อก่อน", message: "กรุณากรอกประเภทงาน IT" });
 
           try {
-            const name = (inp?.value || "").trim();
-            if (!name) return toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: "กรุณากรอกชื่อประเภทงาน IT" });
-
             setBusy(btn, true, "กำลังเพิ่ม...");
-            const res = await window.api.settings.itJobTypes.create({ name, is_active: true });
-            const created = res?.data;
-
-            // ✅ เพิ่มแล้วลงตารางทันที
-            if (created) state.jobTypes.push(created);
-            else state.jobTypes.push({ it_job_type_id: Date.now(), name, is_active: true, updated_at: new Date().toISOString() });
-
-            rerenderTablesOnly();
-
-            // ✅ เคลียร์ input + focus
-            if (inp) {
-              inp.value = "";
-              inp.focus();
-            }
-
-            toast({ type: "success", title: "เพิ่มแล้ว", message: `ประเภทงาน IT “${name}”` });
-          } catch (e2) {
-            toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: e2?.message || String(e2) });
+            await api.job.create({ name, is_active: true });
+            inp.value = "";
+            await loadAll();
+            render();
+            toast({ type: "success", title: "เพิ่มแล้ว", message: name });
+          } catch (err) {
+            toast({ type: "error", title: "เพิ่มไม่สำเร็จ", message: err?.message || String(err) });
           } finally {
             setBusy(btn, false);
           }
@@ -619,10 +753,8 @@
         bindManageButtons();
       };
 
-      // init
       await loadAll();
       render();
-      setUpdatedNow?.();
     },
   };
 })();
