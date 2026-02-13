@@ -5,7 +5,7 @@
 -- Dumped from database version 13.21
 -- Dumped by pg_dump version 17.5
 
--- Started on 2026-02-13 13:12:13
+-- Started on 2026-02-13 13:52:05
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -427,13 +427,6 @@ ALTER TABLE ONLY public.users ALTER COLUMN user_id SET DEFAULT nextval('public.u
 --
 
 COPY public.document_types (document_type_id, name, is_active, created_by, created_at, updated_at, deleted_at) FROM stdin;
-3	รายงานการประชุม	t	1	2026-02-12 09:20:53.292137	2026-02-12 09:20:53.292137	\N
-4	เอกสารสัญญา	t	1	2026-02-12 09:20:58.596252	2026-02-12 09:20:58.596252	\N
-5	เอกสารห้อง Server	t	1	2026-02-12 09:21:05.041238	2026-02-12 09:21:05.041238	\N
-6	เอกสารจัดซื้อจัดจ้าง	t	1	2026-02-12 09:21:12.052113	2026-02-12 09:21:12.052113	\N
-7	หนังสือเวียน	t	1	2026-02-12 09:21:16.975687	2026-02-12 09:21:16.975687	\N
-2	เอกสารขอใช้งาน	t	1	2026-02-12 09:20:47.242451	2026-02-12 14:15:52.143234	\N
-8	นโยบายและข้อปฏิบัติ	t	1	2026-02-12 09:21:22.215516	2026-02-12 14:16:13.763721	\N
 \.
 
 
@@ -444,20 +437,6 @@ COPY public.document_types (document_type_id, name, is_active, created_by, creat
 --
 
 COPY public.documents (document_id, original_file_name, stored_file_name, file_path, file_size, mime_type, folder_id, created_by, created_at, updated_at, deleted_at, deleted_by, document_type_id, it_job_type_id, title, public_url) FROM stdin;
-1	1770801430950-119209192-185469.jpg	1770801430950-119209192-185469.jpg	C:\\xampp\\htdocs\\top\\1770801430950-119209192-185469.jpg	52762	image/jpeg	\N	1	2026-02-12 09:22:31.956868	2026-02-12 09:22:31.956868	\N	\N	\N	\N	1770801430950-119209192-185469	/top/1770801430950-119209192-185469.jpg
-2	1770692494859-162788142-___________.png	1770692494859-162788142-___________.png	C:\\xampp\\htdocs\\top\\1770692494859-162788142-___________.png	235435	image/png	\N	1	2026-02-12 09:22:31.962673	2026-02-12 09:22:31.962673	\N	\N	\N	\N	1770692494859-162788142-___________	/top/1770692494859-162788142-___________.png
-3	สกรีนช็อต 2026-02-05 110318.png	1770879920988-839606260-__________2026-02-05_110318.png	D:\\doc-system\\backend\\uploads\\1770879920988-839606260-__________2026-02-05_110318.png	154237	image/png	2	1	2026-02-12 14:05:21.156741	2026-02-12 14:05:21.156741	\N	\N	2	2	12121212	/top/1770879920988-839606260-__________2026-02-05_110318.png
-4	สกรีนช็อต 2026-02-05 111051.png	1770879921197-492737349-__________2026-02-05_111051.png	D:\\doc-system\\backend\\uploads\\1770879921197-492737349-__________2026-02-05_111051.png	158622	image/png	2	1	2026-02-12 14:05:21.216953	2026-02-12 14:05:21.216953	\N	\N	2	2	สกรีนช็อต 2026-02-05 111051	/top/1770879921197-492737349-__________2026-02-05_111051.png
-5	สกรีนช็อต 2026-02-05 113254.png	1770879921288-837341368-__________2026-02-05_113254.png	D:\\doc-system\\backend\\uploads\\1770879921288-837341368-__________2026-02-05_113254.png	184099	image/png	2	1	2026-02-12 14:05:21.305033	2026-02-12 14:05:21.305033	\N	\N	2	2	สกรีนช็อต 2026-02-05 113254	/top/1770879921288-837341368-__________2026-02-05_113254.png
-6	สกรีนช็อต 2026-02-05 135354.png	1770879921369-336940288-__________2026-02-05_135354.png	D:\\doc-system\\backend\\uploads\\1770879921369-336940288-__________2026-02-05_135354.png	238584	image/png	2	1	2026-02-12 14:05:21.387715	2026-02-12 14:05:21.387715	\N	\N	2	2	สกรีนช็อต 2026-02-05 135354	/top/1770879921369-336940288-__________2026-02-05_135354.png
-13	สกรีนช็อต 2026-02-05 152906.png	1770879921998-263683853-__________2026-02-05_152906.png	D:\\doc-system\\backend\\uploads\\1770879921998-263683853-__________2026-02-05_152906.png	130419	image/png	2	1	2026-02-12 14:05:22.009204	2026-02-13 08:50:56.366331	2026-02-13 08:50:56.366331	4	2	2	สกรีนช็อต 2026-02-05 152906	/top/1770879921998-263683853-__________2026-02-05_152906.png
-12	สกรีนช็อต 2026-02-05 152727.png	1770879921929-239911679-__________2026-02-05_152727.png	D:\\doc-system\\backend\\uploads\\1770879921929-239911679-__________2026-02-05_152727.png	160854	image/png	2	1	2026-02-12 14:05:21.943597	2026-02-13 08:50:59.182466	2026-02-13 08:50:59.182466	4	2	2	15151515	/top/1770879921929-239911679-__________2026-02-05_152727.png
-11	สกรีนช็อต 2026-02-05 145521.png	1770879921829-17071713-__________2026-02-05_145521.png	D:\\doc-system\\backend\\uploads\\1770879921829-17071713-__________2026-02-05_145521.png	159126	image/png	2	1	2026-02-12 14:05:21.84703	2026-02-13 08:51:02.233596	2026-02-13 08:51:02.233596	4	2	2	สกรีนช็อต 2026-02-05 145521	/top/1770879921829-17071713-__________2026-02-05_145521.png
-10	สกรีนช็อต 2026-02-05 145503.png	1770879921731-194250176-__________2026-02-05_145503.png	D:\\doc-system\\backend\\uploads\\1770879921731-194250176-__________2026-02-05_145503.png	226486	image/png	2	1	2026-02-12 14:05:21.76177	2026-02-13 08:51:04.684084	2026-02-13 08:51:04.684084	4	2	2	สกรีนช็อต 2026-02-05 145503	/top/1770879921731-194250176-__________2026-02-05_145503.png
-9	สกรีนช็อต 2026-02-05 142634.png	1770879921648-861548971-__________2026-02-05_142634.png	D:\\doc-system\\backend\\uploads\\1770879921648-861548971-__________2026-02-05_142634.png	286273	image/png	2	1	2026-02-12 14:05:21.669214	2026-02-13 08:51:22.402311	2026-02-13 08:51:22.402311	4	2	2	สกรีนช็อต 2026-02-05 142634	/top/1770879921648-861548971-__________2026-02-05_142634.png
-8	สกรีนช็อต 2026-02-05 135502.png	1770879921563-495599636-__________2026-02-05_135502.png	D:\\doc-system\\backend\\uploads\\1770879921563-495599636-__________2026-02-05_135502.png	366180	image/png	2	1	2026-02-12 14:05:21.586147	2026-02-13 08:51:26.242128	2026-02-13 08:51:26.242128	4	2	2	สกรีนช็อต 2026-02-05 135502	/top/1770879921563-495599636-__________2026-02-05_135502.png
-7	สกรีนช็อต 2026-02-05 135451.png	1770879921471-227708784-__________2026-02-05_135451.png	D:\\doc-system\\backend\\uploads\\1770879921471-227708784-__________2026-02-05_135451.png	291286	image/png	2	1	2026-02-12 14:05:21.490914	2026-02-13 08:51:30.778118	2026-02-13 08:51:30.778118	4	2	2	สกรีนช็อต 2026-02-05 135451	/top/1770879921471-227708784-__________2026-02-05_135451.png
-14	สกรีนช็อต 2026-02-05 110318.png	1770947584978-359828433-__________2026-02-05_110318.png	D:\\doc-system\\backend\\uploads\\1770947584978-359828433-__________2026-02-05_110318.png	154237	image/png	3	4	2026-02-13 08:53:05.12822	2026-02-13 10:11:24.720858	2026-02-13 10:11:24.720858	1	2	2	ท็อปสวัสดีครับ	/top/1770947584978-359828433-__________2026-02-05_110318.png
 \.
 
 
@@ -468,9 +447,6 @@ COPY public.documents (document_id, original_file_name, stored_file_name, file_p
 --
 
 COPY public.folders (folder_id, name, parent_id, created_by, created_at, updated_at, deleted_at, deleted_by, document_type_id, it_job_type_id, doc_prefix, description) FROM stdin;
-1	แฟ้มเอกสารขอuser	\N	1	2026-02-12 09:41:50.339176	2026-02-12 09:41:50.339176	\N	\N	2	2	User	เอกสารขอUser
-2	เอกสารขอuser ปี2568	1	1	2026-02-12 09:42:56.540471	2026-02-12 09:42:56.540471	\N	\N	2	2	User68_	เอกสารขอUser ปี2568ทั้งหมด
-3	เอกสารขอuser ปี2569	1	1	2026-02-12 09:44:34.458277	2026-02-13 10:20:19.720702	2026-02-13 10:20:19.720702	1	2	2	User69_	เอกสารขอUser ปี2569ทั้งหมด
 \.
 
 
@@ -481,15 +457,6 @@ COPY public.folders (folder_id, name, parent_id, created_by, created_at, updated
 --
 
 COPY public.it_job_types (it_job_type_id, name, is_active, created_by, created_at, updated_at, deleted_at) FROM stdin;
-1	ผู้ใช้และสิทธิ์การใช้งาน	t	1	2026-02-12 09:21:39.418417	2026-02-12 09:21:39.418417	\N
-2	ระบบงานและแอปพลิเคชัน	t	1	2026-02-12 09:21:45.292385	2026-02-12 09:21:45.292385	\N
-3	เครือข่ายและอินเทอร์เน็ต	t	1	2026-02-12 09:21:51.977063	2026-02-12 09:21:51.977063	\N
-4	เครื่องแม่ข่ายและห้อง Server	t	1	2026-02-12 09:21:59.378052	2026-02-12 09:21:59.378052	\N
-5	ความปลอดภัยสารสนเทศ	t	1	2026-02-12 09:22:04.340716	2026-02-12 09:22:04.340716	\N
-6	อุปกรณ์คอมพิวเตอร์และฮาร์ดแวร์	t	1	2026-02-12 09:22:09.524751	2026-02-12 09:22:09.524751	\N
-7	จัดซื้อจัดจ้างและสัญญา	t	1	2026-02-12 09:22:15.260343	2026-02-12 09:22:15.260343	\N
-8	ระเบียบ/นโยบาย/มาตรฐาน	t	1	2026-02-12 09:22:20.155968	2026-02-12 09:22:20.155968	\N
-9	อื่นๆ	t	1	2026-02-12 09:22:27.10347	2026-02-12 09:22:27.10347	\N
 \.
 
 
@@ -511,7 +478,7 @@ COPY public.users (user_id, username, password_hash, role, is_active, created_at
 -- Name: document_types_document_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.document_types_document_type_id_seq', 8, true);
+SELECT pg_catalog.setval('public.document_types_document_type_id_seq', 1, false);
 
 
 --
@@ -520,7 +487,7 @@ SELECT pg_catalog.setval('public.document_types_document_type_id_seq', 8, true);
 -- Name: documents_document_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.documents_document_id_seq', 14, true);
+SELECT pg_catalog.setval('public.documents_document_id_seq', 1, false);
 
 
 --
@@ -529,7 +496,7 @@ SELECT pg_catalog.setval('public.documents_document_id_seq', 14, true);
 -- Name: folders_folder_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.folders_folder_id_seq', 3, true);
+SELECT pg_catalog.setval('public.folders_folder_id_seq', 1, false);
 
 
 --
@@ -538,7 +505,7 @@ SELECT pg_catalog.setval('public.folders_folder_id_seq', 3, true);
 -- Name: it_job_types_it_job_type_id_seq; Type: SEQUENCE SET; Schema: public; Owner: postgres
 --
 
-SELECT pg_catalog.setval('public.it_job_types_it_job_type_id_seq', 9, true);
+SELECT pg_catalog.setval('public.it_job_types_it_job_type_id_seq', 1, false);
 
 
 --
@@ -869,7 +836,7 @@ REVOKE USAGE ON SCHEMA public FROM PUBLIC;
 GRANT ALL ON SCHEMA public TO PUBLIC;
 
 
--- Completed on 2026-02-13 13:12:14
+-- Completed on 2026-02-13 13:52:05
 
 --
 -- PostgreSQL database dump complete
