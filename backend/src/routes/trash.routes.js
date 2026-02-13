@@ -47,6 +47,35 @@ function resolveExistingFilePath(row) {
   return null;
 }
 
+// =======================
+// ✅ Column-introspection (กัน SELECT คอลัมน์ที่ถูกลบ/ไม่มี)
+// =======================
+let _docCols = null;
+let _folderCols = null;
+
+async function getCols(tableName) {
+  const { rows } = await pool.query(
+    `
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='public' AND table_name=$1
+    `,
+    [tableName]
+  );
+  return new Set(rows.map((r) => r.column_name));
+}
+
+async function ensureColsLoaded() {
+  if (!_docCols) _docCols = await getCols("documents");
+  if (!_folderCols) _folderCols = await getCols("folders");
+}
+
+function colOrNull(cols, colName, alias = null, tableAlias = null) {
+  const ta = tableAlias ? `${tableAlias}.` : "";
+  const as = alias ? ` AS ${alias}` : "";
+  return cols.has(colName) ? `${ta}${colName}${as}` : `NULL${as || (alias ? ` AS ${alias}` : "")}`;
+}
+
 /**
  * GET /api/trash
  * GET /api/trash?type=documents
@@ -59,65 +88,76 @@ router.get("/", authRequired, requireAdmin, async (req, res) => {
   try {
     const type = String(req.query.type || "all");
 
+    await ensureColsLoaded();
+
     let documents = [];
     let folders = [];
 
     // ===== documents =====
     if (type === "documents" || type === "all") {
-      const { rows } = await pool.query(`
+      // สร้าง SELECT แบบปลอดภัย: ถ้าคอลัมน์ไม่มี -> NULL (ไม่พัง)
+      const docSelect = `
         SELECT
           'document' AS trash_type,
 
           document_id AS id,
           original_file_name AS name,
-          mime_type,
-          deleted_at,
+          ${colOrNull(_docCols, "mime_type")} AS mime_type,
+          ${colOrNull(_docCols, "deleted_at")} AS deleted_at,
 
-          -- fields เดิม (คงไว้)
-          document_id,
-          original_file_name,
-          stored_file_name,
-          file_path,
-          file_size,
-          mime_type,
-          folder_id,
-          created_by,
-          created_at,
-          updated_at AS updated_at_orig,
-          deleted_at,
-          deleted_by,
-          document_type_id,
-          it_job_type_id,
-          created_by_user_id
+          -- fields เดิม (คงไว้เท่าที่มีจริง)
+          ${colOrNull(_docCols, "document_id")} AS document_id,
+          ${colOrNull(_docCols, "title")} AS title,
+          ${colOrNull(_docCols, "original_file_name")} AS original_file_name,
+          ${colOrNull(_docCols, "stored_file_name")} AS stored_file_name,
+          ${colOrNull(_docCols, "file_path")} AS file_path,
+          ${colOrNull(_docCols, "file_size")} AS file_size,
+          ${colOrNull(_docCols, "mime_type")} AS mime_type,
+          ${colOrNull(_docCols, "folder_id")} AS folder_id,
+          ${colOrNull(_docCols, "created_by")} AS created_by,
+          ${colOrNull(_docCols, "created_at")} AS created_at,
+          ${colOrNull(_docCols, "updated_at")} AS updated_at_orig,
+          ${colOrNull(_docCols, "deleted_at")} AS deleted_at_dup,
+          ${colOrNull(_docCols, "deleted_by")} AS deleted_by,
+          ${colOrNull(_docCols, "document_type_id")} AS document_type_id,
+          ${colOrNull(_docCols, "it_job_type_id")} AS it_job_type_id,
+          ${colOrNull(_docCols, "created_by_user_id")} AS created_by_user_id,
+          ${colOrNull(_docCols, "public_url")} AS public_url
         FROM documents
         WHERE deleted_at IS NOT NULL
         ORDER BY deleted_at DESC
-      `);
+      `;
+
+      const { rows } = await pool.query(docSelect);
       documents = rows;
     }
 
     // ===== folders =====
     if (type === "folders" || type === "all") {
-      const { rows } = await pool.query(`
+      const folderSelect = `
         SELECT
           'folder' AS trash_type,
 
           folder_id AS id,
           name,
           parent_id,
-          deleted_at,
+          ${colOrNull(_folderCols, "deleted_at")} AS deleted_at,
 
-          -- fields เดิม (คงไว้)
-          folder_id,
-          name,
-          parent_id,
-          created_by,
-          created_at,
-          deleted_at
+          -- fields เดิม (คงไว้เท่าที่มีจริง)
+          ${colOrNull(_folderCols, "folder_id")} AS folder_id,
+          ${colOrNull(_folderCols, "name")} AS name_dup,
+          ${colOrNull(_folderCols, "parent_id")} AS parent_id_dup,
+          ${colOrNull(_folderCols, "created_by")} AS created_by,
+          ${colOrNull(_folderCols, "created_at")} AS created_at,
+          ${colOrNull(_folderCols, "updated_at")} AS updated_at,
+          ${colOrNull(_folderCols, "deleted_at")} AS deleted_at_dup,
+          ${colOrNull(_folderCols, "deleted_by")} AS deleted_by
         FROM folders
         WHERE deleted_at IS NOT NULL
         ORDER BY deleted_at DESC
-      `);
+      `;
+
+      const { rows } = await pool.query(folderSelect);
       folders = rows;
     }
 
@@ -224,6 +264,11 @@ router.post("/folders/:folder_id/restore", authRequired, requireAdmin, async (re
     const { folder_id } = req.params;
     if (!isValidId(folder_id)) {
       return res.status(400).json({ message: "INVALID_FOLDER_ID" });
+    }
+
+    // NOTE: folders ปกติเป็น int — ถ้าไม่ใช่เลข ให้แจ้งตรงๆ กันพัง
+    if (!/^\d+$/.test(String(folder_id))) {
+      return res.status(400).json({ message: "FOLDER_ID_MUST_BE_INTEGER" });
     }
 
     const rootId = Number(folder_id);

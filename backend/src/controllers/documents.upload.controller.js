@@ -201,7 +201,7 @@ export async function uploadDocument(req, res) {
       public_url = `/top/${req.file.filename}`;
     } catch (e) {
       console.warn("⚠️ copy to XAMPP failed:", e?.message);
-      // ไม่ล้ม upload ทั้งก้อน เพื่อไม่พัง flow เดิม
+      
       public_url = null;
     }
 

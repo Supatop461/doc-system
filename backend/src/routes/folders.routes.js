@@ -427,14 +427,28 @@ router.delete("/:id", authRequired, requireAdmin, async (req, res) => {
       });
     }
 
+    // ✅ ใส่คนลบลง deleted_by
+    const deletedBy =
+      req.user?.id ??
+      req.user?.user_id ??
+      req.user?.userId ??
+      req.user?.created_by_user_id;
+
+    const deletedByNum = Number(deletedBy);
+    if (!Number.isFinite(deletedByNum)) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     const result = await pool.query(
       `
       UPDATE folders
-      SET deleted_at = NOW(), updated_at = NOW()
+      SET deleted_at = NOW(),
+          deleted_by = $2,
+          updated_at = NOW()
       WHERE folder_id = $1 AND deleted_at IS NULL
-      RETURNING folder_id, name, deleted_at
+      RETURNING folder_id, name, deleted_at, deleted_by
       `,
-      [id]
+      [id, deletedByNum]
     );
 
     return res.json({ data: result.rows[0] });
